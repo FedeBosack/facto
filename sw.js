@@ -1,6 +1,6 @@
 // Service Worker for Facto PWA - V2.1
 // Strategy: Network-First (always try to get the latest version)
-const CACHE_NAME = 'facto-v2.8';
+const CACHE_NAME = 'facto-v2.9';
 const urlsToCache = [
     './',
     './index.html',
@@ -13,6 +13,9 @@ const urlsToCache = [
     './assets/sounds/focus_pink.wav',
     './assets/sounds/focus_brown.wav',
     './assets/sounds/focus_rain.wav',
+    './assets/sounds/focus_heavy_rain.wav',
+    './assets/sounds/focus_ocean.wav',
+    './assets/sounds/focus_fire.wav',
     './assets/sounds/focus_wind.wav',
     './assets/sounds/focus_432hz.wav',
     './assets/sounds/focus_528hz.wav',
