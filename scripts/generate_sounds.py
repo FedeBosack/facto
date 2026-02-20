@@ -1,8 +1,8 @@
 import wave, struct, math, random
 
-sampleRate = 44100
-duration = 8.0
-crossfade = 1.0 # 1 second crossfade for noises
+sampleRate = 16000 # Un punto medio, para retener algo de alta frecuencia en la lluvia y viento
+duration = 300.0 # 5 Minutos (GAPLESS casi total en una sesión)
+crossfade = 3.0 # Fusión suave en las extremidades
 num_frames = int(sampleRate * duration)
 crossfade_frames = int(sampleRate * crossfade)
 
