@@ -1,6 +1,6 @@
 // Service Worker for Facto PWA - V2.1
 // Strategy: Network-First (always try to get the latest version)
-const CACHE_NAME = 'facto-v2.5';
+const CACHE_NAME = 'facto-v2.6';
 const urlsToCache = [
     './',
     './index.html',

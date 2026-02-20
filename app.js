@@ -1012,10 +1012,11 @@ const app = {
             this.audioContext.resume();
         }
 
-        // Clean up previous oscillators
-        if (this.oscillator) {
-            this.oscillator.stop();
-            this.oscillator.disconnect();
+        // Si el oscilador ya existe, simplemente le subimos el volumen al nivel audible
+        if (this.oscillator && this.gainNode) {
+            this.gainNode.gain.setTargetAtTime(0.1, this.audioContext.currentTime, 0.015);
+            this.data.musicPlaying = true;
+            return;
         }
 
         this.oscillator = this.audioContext.createOscillator();
@@ -1027,16 +1028,19 @@ const app = {
 
         this.oscillator.connect(this.gainNode);
         this.gainNode.connect(this.audioContext.destination);
+
+        // Empieza a sonar y no se detiene más con stop() para engañar al background limits
         this.oscillator.start();
 
         this.data.musicPlaying = true;
     },
 
     stopMusic() {
-        if (this.oscillator) {
-            this.oscillator.stop();
-            this.oscillator.disconnect();
-            this.oscillator = null;
+        if (this.gainNode) {
+            // En lugar de matar el nodo de audio (lo cual permite al teléfono suspender el JS), 
+            // simplemente bajamos el volumen a imperceptible, pero el sonido sigue calculándose 
+            // silenciosamente, manteniendo la App viva en background.
+            this.gainNode.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.015);
         }
         this.data.musicPlaying = false;
     },
