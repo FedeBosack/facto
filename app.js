@@ -61,7 +61,7 @@ const app = {
 
         // UI State
         theme: 'light',
-        focusSound: 'focus_brown.wav',
+        focusSound: 'assets/sounds/focus_brown.wav',
         reminderEnabled: false,
         reminderTime: '09:00',
         timerRunning: false,
@@ -306,7 +306,7 @@ const app = {
             actionStreak: 0,
             lastActionDate: null,
             theme: oldData.theme || 'light',
-            focusSound: oldData.focusSound || 'focus_brown.wav',
+            focusSound: oldData.focusSound || 'assets/sounds/focus_brown.wav',
             reminderEnabled: oldData.reminderEnabled || false,
             reminderTime: oldData.reminderTime || '09:00',
             timerRunning: false,
@@ -1006,7 +1006,7 @@ const app = {
     playMusic() {
         const audio = document.getElementById('focus-audio');
         if (audio) {
-            audio.src = this.data.focusSound || 'focus_brown.wav';
+            audio.src = this.data.focusSound || 'assets/sounds/focus_brown.wav';
             audio.play().catch(e => console.log('Audio playback failed in iOS:', e));
             this.data.musicPlaying = true;
         }
@@ -2066,7 +2066,7 @@ const app = {
         }
         const soundSelect = document.getElementById('focus-sound-select');
         if (soundSelect) {
-            soundSelect.value = this.data.focusSound || 'focus_brown.wav';
+            soundSelect.value = this.data.focusSound || 'assets/sounds/focus_brown.wav';
         }
     },
 
@@ -2076,15 +2076,27 @@ const app = {
             this.data.focusSound = soundSelect.value;
             this.saveData();
 
-            // Preview sound briefly
+            // If preview is actively playing, switch the track directly
             const audio = document.getElementById('focus-audio');
-            if (audio) {
+            if (audio && !audio.paused) {
                 audio.src = this.data.focusSound;
                 audio.play().catch(e => console.log(e));
-                setTimeout(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                }, 2000);
+            }
+        }
+    },
+
+    toggleSoundPreview() {
+        const audio = document.getElementById('focus-audio');
+        const btn = document.getElementById('preview-btn');
+        if (audio && btn) {
+            if (audio.paused) {
+                audio.src = this.data.focusSound || 'assets/sounds/focus_brown.wav';
+                audio.play().catch(e => console.log(e));
+                btn.textContent = '⏹️ Detener';
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+                btn.textContent = '▶️ Probar';
             }
         }
     },
