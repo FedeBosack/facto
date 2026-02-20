@@ -3,6 +3,23 @@
 // Focus & Action To Your Goals
 // ============================================
 
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyDSQ1YkwbkWqK3CQxf_BbmIAdr5kg_cgiU",
+    authDomain: "facto-app-f1fae.firebaseapp.com",
+    projectId: "facto-app-f1fae",
+    storageBucket: "facto-app-f1fae.firebasestorage.app",
+    messagingSenderId: "576372391539",
+    appId: "1:576372391539:web:e36d81ccacc0af84f07406"
+};
+
+// Initialize Firebase only if the script is loaded
+let db;
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+}
+
 // Default Categories
 const DEFAULT_CATEGORIES = [
     { id: 'meta', name: 'Meta', icon: '🎯', color: '#667eea' },
@@ -16,6 +33,7 @@ const app = {
     // V2 State
     data: {
         version: 2,
+        user: null,
 
         // Categories
         categories: [...DEFAULT_CATEGORIES],
@@ -58,15 +76,77 @@ const app = {
     // ============================================
 
     init() {
-        this.loadData();
         this.applyTheme();
-        this.updateStreaks();
         this.setupServiceWorker();
         this.requestNotificationPermission();
-        setTimeout(() => {
+        this.setupAuth();
+    },
+
+    setupAuth() {
+        if (typeof firebase !== 'undefined') {
+            firebase.auth().onAuthStateChanged(user => {
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) loadingScreen.classList.remove('active');
+
+                if (user) {
+                    this.data.user = {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        photoURL: user.photoURL
+                    };
+                    this.syncId = user.uid;
+                    this.updateUserUI();
+
+                    this.loadData().then(() => {
+                        this.updateStreaks();
+                        this.checkFirstVisit();
+                    });
+                } else {
+                    this.data.user = null;
+                    this.syncId = null;
+                    this.showScreen('login-screen');
+                }
+            });
+        } else {
             this.hideLoading();
-            this.checkFirstVisit();
-        }, 1500);
+            this.loadData().then(() => {
+                this.updateStreaks();
+                this.checkFirstVisit();
+            });
+        }
+    },
+
+    loginWithGoogle() {
+        if (typeof firebase !== 'undefined') {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).catch(error => {
+                console.error("Error al iniciar sesión:", error);
+                alert("Error al iniciar sesión: " + error.message);
+            });
+        }
+    },
+
+    logout() {
+        if (typeof firebase !== 'undefined') {
+            firebase.auth().signOut().catch(error => {
+                console.error("Error al cerrar sesión:", error);
+            });
+        }
+    },
+
+    updateUserUI() {
+        if (this.data.user) {
+            const nameEl = document.getElementById('user-name');
+            const emailEl = document.getElementById('user-email');
+            const avatarEl = document.getElementById('user-avatar');
+            if (nameEl) nameEl.textContent = this.data.user.displayName || 'Usuario';
+            if (emailEl) emailEl.textContent = this.data.user.email;
+            if (avatarEl && this.data.user.photoURL) {
+                avatarEl.src = this.data.user.photoURL;
+                avatarEl.style.display = 'block';
+            }
+        }
     },
 
     checkFirstVisit() {
@@ -97,7 +177,8 @@ const app = {
     // DATA MANAGEMENT
     // ============================================
 
-    loadData() {
+    async loadData() {
+        // 1. Cargar local primero para rapidez
         const saved = localStorage.getItem('facto_data');
         if (saved) {
             const parsedData = JSON.parse(saved);
@@ -112,15 +193,58 @@ const app = {
 
             this.applyTheme();
         }
+
+        // 2. Sincronizar en la nube (Firestore)
+        if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && this.syncId) {
+
+            try {
+                const docRef = db.collection('users').doc(this.syncId);
+                const docSnap = await docRef.get();
+
+                if (docSnap.exists) {
+                    const cloudData = docSnap.data();
+                    if (cloudData.version === 2) {
+                        this.data = { ...this.data, ...cloudData };
+                        localStorage.setItem('facto_data', JSON.stringify(this.data));
+                        this.applyTheme();
+
+                        // Refrescar UI si cambiaron datos y estamos en alguna pantalla
+                        if (document.getElementById('home-screen') && document.getElementById('home-screen').classList.contains('active')) {
+                            this.renderHome();
+                        }
+                    }
+                } else {
+                    // Si no existen en la nube, guardar los locales (ej. primera vez)
+                    this.saveDataToCloud();
+                }
+            } catch (error) {
+                console.error("Error al sincronizar con Firebase:", error);
+            }
+        }
     },
 
     saveData() {
+        // Guardado local instantáneo para UI sin interrupciones
         localStorage.setItem('facto_data', JSON.stringify(this.data));
+        // Guardado en la nube en segundo plano
+        this.saveDataToCloud();
+    },
+
+    async saveDataToCloud() {
+        if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && this.syncId) {
+            try {
+                // Almacenarlo bajo una colección 'users' y el ID del dispositivo
+                await db.collection('users').doc(this.syncId).set(this.data);
+            } catch (error) {
+                console.error("Error al guardar en Firebase:", error);
+            }
+        }
     },
 
     migrateV1toV2(oldData) {
         const newData = {
             version: 2,
+            user: null,
             categories: [...DEFAULT_CATEGORIES],
             customCategories: [],
             goals: [],
@@ -189,7 +313,8 @@ const app = {
     renderHome() {
         // Update both streaks - show consecutive days
         document.getElementById('concentration-streak').textContent = this.data.consecutiveDays || 0;
-        document.getElementById('action-streak').textContent = this.getActionConsecutiveDays();
+        // Totalizador de acciones globales
+        document.getElementById('action-streak').textContent = this.data.actions.filter(a => a.completed).length;
 
         // Update tagline
         this.updateTagline();
@@ -243,8 +368,17 @@ const app = {
                         </div>
                         <div class="goal-title">${this.escapeHtml(goal.title)}</div>
                         ${goal.description ? `<div class="goal-description">${this.escapeHtml(goal.description)}</div>` : ''}
+                        
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; display: flex; justify-content: space-between;">
+                            <span>Última mod: ${goal.modifiedDate ? new Date(goal.modifiedDate).toLocaleDateString() : 'N/A'}</span>
+                            <span style="font-weight: 600; color: var(--primary);">
+                                Acciones: ${this.data.actions.filter(a => a.goalIds.includes(goal.id) && a.completed).length} / ${this.data.actions.filter(a => a.goalIds.includes(goal.id)).length}
+                            </span>
+                        </div>
+
                         <div class="goal-footer">
                             <span class="goal-stats">${goal.concentrationCount || 0} sesiones</span>
+                            
                             <div class="goal-actions">
                                 <button class="btn-icon-small" onclick="app.editGoal('${goal.id}')" title="Editar">✏️</button>
                                 <button class="btn-icon-small" onclick="app.archiveGoal('${goal.id}')" title="Archivar">📦</button>
@@ -289,16 +423,31 @@ const app = {
     renderTodayActions() {
         const actionDisplay = document.getElementById('action-display');
         const today = new Date().toDateString();
-        const todayActions = this.data.actions.filter(a => a.date === today);
+        // Solo mostrar acciones "Para Hoy" que NO estén completadas (Archivado visual automático)
+        const todayActions = this.data.actions.filter(a => a.date === today && !a.completed);
 
         if (todayActions.length === 0) {
-            actionDisplay.innerHTML = `
-                <div class="no-action">
-                    <p class="empty-text">No hay acciones para hoy</p>
-                    <p class="motivational-text">"La acción hay que hacerla, no te podés quedar sentado"</p>
-                    <button class="btn btn-secondary" onclick="app.showCreateActionScreen()">Definir Acción</button>
-                </div>
-            `;
+            // Verificar si tenían acciones hoy y las terminaron
+            const completedToday = this.data.actions.filter(a => a.date === today && a.completed);
+
+            if (completedToday.length > 0) {
+                actionDisplay.innerHTML = `
+                    <div class="no-action" style="padding: 20px 10px; text-align: center;">
+                        <span style="font-size: 2.5rem; display: block; margin-bottom: 10px;">🎉</span>
+                        <p class="motivational-text" style="color: var(--primary);">¡Completaste todas tus acciones de hoy!</p>
+                        <p class="small-text">Sigue así, el focus está rindiendo frutos.</p>
+                        <button class="btn btn-secondary btn-small" style="margin-top: 15px;" onclick="app.showCreateActionScreen()">+ Agregar otra Acción</button>
+                    </div>
+                `;
+            } else {
+                actionDisplay.innerHTML = `
+                    <div class="no-action">
+                        <p class="empty-text">No hay acciones para hoy</p>
+                        <p class="motivational-text">"La acción hay que hacerla, no te podés quedar sentado"</p>
+                        <button class="btn btn-secondary" onclick="app.showCreateActionScreen()">Definir Acción</button>
+                    </div>
+                `;
+            }
         } else {
             actionDisplay.innerHTML = todayActions.map(action => {
                 const linkedGoals = action.goalIds.map(gId => {
@@ -315,6 +464,9 @@ const app = {
                             <div class="action-text">${this.escapeHtml(action.text)}</div>
                             ${linkedGoals ? `<div class="action-goals">🎯 ${this.escapeHtml(linkedGoals)}</div>` : ''}
                             ${action.notes ? `<div class="action-notes">💭 ${this.escapeHtml(action.notes)}</div>` : ''}
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">
+                                Modificado: ${action.modifiedDate ? new Date(action.modifiedDate).toLocaleDateString() : 'Hoy'}
+                            </div>
                         </div>
                         <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Editar notas">💬</button>
                     </div>
@@ -643,6 +795,14 @@ const app = {
         document.getElementById('action-notes-input').value = '';
         this.renderGoalCheckboxesForAction();
         this.showScreen('create-action-screen');
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Enfocar el input del texto nombre
+        setTimeout(() => {
+            const textInput = document.getElementById('action-text-input');
+            if (textInput) textInput.focus();
+        }, 100);
     },
 
     prepareActionForConcentratedGoals() {
@@ -728,19 +888,24 @@ const app = {
 
         action.completed = !action.completed;
         action.completedDate = action.completed ? new Date().toISOString() : null;
+        action.modifiedDate = new Date().toISOString();
 
-        // Update action streak
+        // Update action streak - Independientemente de qué acción sea, verificamos si hoy completó AL MENOS UNA
         if (action.completed) {
             const today = new Date().toDateString();
             const yesterday = new Date(Date.now() - 86400000).toDateString();
 
-            if (this.data.lastActionDate === yesterday) {
-                this.data.actionStreak++;
-            } else if (this.data.lastActionDate !== today) {
-                this.data.actionStreak = 1;
-            }
+            // Reviso si en las acciones (además de la actual) ya completó alguna hoy para no sumar doble Streak el mismo día
+            const otherCompletedToday = this.data.actions.some(a => a.id !== actionId && a.completed && new Date(a.completedDate).toDateString() === today);
 
-            this.data.lastActionDate = today;
+            if (!otherCompletedToday) {
+                if (this.data.lastActionDate === yesterday) {
+                    this.data.actionStreak++;
+                } else if (this.data.lastActionDate !== today) {
+                    this.data.actionStreak = 1;
+                }
+                this.data.lastActionDate = today;
+            }
 
             // Add to history
             this.data.history.push({
@@ -1057,12 +1222,15 @@ const app = {
                 const category = this.data.categories.find(c => c.id === goal.category) ||
                     this.data.customCategories.find(c => c.id === goal.category) ||
                     { icon: '🎯' };
-                const actionCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id) && !a.completed).length;
+                const completedCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id) && a.completed).length;
+                const totalCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id)).length;
                 return `
                             <div class="goal-title-item" onclick="app.showActionsForGoal('${goal.id}')">
                                 <span class="goal-title-icon">${category.icon}</span>
-                                <span class="goal-title-text">${this.escapeHtml(goal.title)}</span>
-                                ${actionCount > 0 ? `<span style="font-size: 0.75rem; color: var(--text-secondary);">${actionCount} ✅</span>` : ''}
+                                <span class="goal-title-text" style="flex:1;">${this.escapeHtml(goal.title)}</span>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary); background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px;">
+                                    ${completedCount}/${totalCount} ✅
+                                </span>
                             </div>
                         `;
             }).join('')}
@@ -1116,19 +1284,22 @@ const app = {
                 { icon: '🎯', color: '#667eea' };
 
             const completedCount = goalActions.filter(a => a.completed).length;
+            const incompleteActions = goalActions.filter(a => !a.completed);
             const today = new Date().toDateString();
+
+            if (incompleteActions.length === 0) return; // No mostrar el grupo si todas ya se completaron
 
             html += `
                 <div class="action-goal-group" style="background: var(--card-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border-left: 4px solid ${category.color};">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                         <span style="font-size: 1.2rem;">${category.icon}</span>
                         <span style="font-weight: 600; font-size: 0.95rem; flex: 1;">${this.escapeHtml(goal.title)}</span>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">${completedCount}/${goalActions.length} ✓</span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">${completedCount}/${goalActions.length} ✅</span>
                     </div>
                     <div class="action-items-list">
             `;
 
-            goalActions.forEach(action => {
+            incompleteActions.forEach(action => {
                 const isToday = action.date === today;
                 const dateLabel = isToday ? 'Hoy' : new Date(action.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
                 let prosConsIndicator = '';
@@ -1402,7 +1573,7 @@ const app = {
         const completedActions = linkedActions.filter(a => a.completed).length;
 
         const dtOpts = { day: 'numeric', month: 'short', year: 'numeric' };
-        const createdDate = goal.createdDate 
+        const createdDate = goal.createdDate
             ? new Date(goal.createdDate).toLocaleDateString('es-AR', dtOpts) : '';
 
         return `
@@ -1420,10 +1591,10 @@ const app = {
                     </div>
                     <div class="goal-actions">
                         <button class="btn-icon-small" onclick="event.stopPropagation(); app.editGoal('${goal.id}')" title="Editar">✏️</button>
-                        ${isArchived 
-                            ? `<button class="btn-icon-small" onclick="event.stopPropagation(); app.unarchiveGoal('${goal.id}')" title="Restaurar">♻️</button>`
-                            : `<button class="btn-icon-small" onclick="event.stopPropagation(); app.archiveGoal('${goal.id}')" title="Archivar">📦</button>`
-                        }
+                        ${isArchived
+                ? `<button class="btn-icon-small" onclick="event.stopPropagation(); app.unarchiveGoal('${goal.id}')" title="Restaurar">♻️</button>`
+                : `<button class="btn-icon-small" onclick="event.stopPropagation(); app.archiveGoal('${goal.id}')" title="Archivar">📦</button>`
+            }
                         <button class="btn-icon-small" onclick="event.stopPropagation(); app.deleteGoal('${goal.id}')" title="Eliminar">🗑️</button>
                     </div>
                 </div>
@@ -1670,6 +1841,9 @@ const app = {
     },
 
     editAction(actionId) {
+        // Record if we are coming from the actions-screen
+        this.editingFromActionsScreen = document.getElementById('actions-screen').classList.contains('active');
+
         const action = this.data.actions.find(a => a.id === actionId);
         if (!action) return;
         document.getElementById('action-id-input').value = action.id;
@@ -1688,6 +1862,7 @@ const app = {
             });
         }
         this.showScreen('create-action-screen');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
     saveAction() {
@@ -1737,8 +1912,15 @@ const app = {
         }
 
         this.saveData();
-        this.showScreen('home-screen');
-        this.renderHome();
+
+        if (this.editingFromActionsScreen) {
+            this.showScreen('actions-screen');
+            this.renderActionsScreen();
+            this.editingFromActionsScreen = false;
+        } else {
+            this.showScreen('home-screen');
+            this.renderHome();
+        }
     },
 
     cancelActionEdit() {
@@ -1780,8 +1962,8 @@ const app = {
                 <span style="font-size: 1.5rem;">${cat.icon}</span>
                 <span style="flex: 1; font-weight: 500;">${cat.name}</span>
                 <span style="width: 20px; height: 20px; border-radius: 50%; background: ${cat.color};"></span>
-                ${this.data.customCategories.find(c => c.id === cat.id) ? 
-                    `<button class="btn-icon-small" onclick="app.deleteCategory('${cat.id}')">🗑️</button>` : ''}
+                ${this.data.customCategories.find(c => c.id === cat.id) ?
+                `<button class="btn-icon-small" onclick="app.deleteCategory('${cat.id}')">🗑️</button>` : ''}
             </div>
         `).join('');
     },
@@ -1922,7 +2104,7 @@ const app = {
         if (!container) return;
 
         const history = (this.data.history || []).slice().reverse();
-        
+
         if (history.length === 0) {
             container.innerHTML = '<p class="empty-text" style="text-align: center; padding: 20px;">No hay historial aún</p>';
         } else {
@@ -1953,9 +2135,6 @@ const app = {
         return div.innerHTML;
     },
 
-    saveData() {
-        localStorage.setItem('facto_data', JSON.stringify(this.data));
-    }
 };
 
 // Initialize the app when the DOM is ready
