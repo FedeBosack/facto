@@ -1,0 +1,265 @@
+/* ============================================
+   FACTO V2.1 - Additional Styles
+   Goals Screen, Categories, Breathing Animation
+   ============================================ */
+
+/* Compact Goals List for Home */
+.goal-titles-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
+
+.goal-title-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.goal-title-item:hover {
+    border-color: var(--primary-solid);
+    background: var(--surface);
+}
+
+.goal-title-icon {
+    font-size: 1.5rem;
+}
+
+.goal-title-text {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Goals Screen */
+.goals-screen-tabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--border);
+}
+
+.tab-button {
+    padding: var(--space-sm) var(--space-md);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    margin-bottom: -2px;
+}
+
+.tab-button.active {
+    color: var(--primary-solid);
+    border-bottom-color: var(--primary-solid);
+}
+
+.goals-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+}
+
+.goal-card.archived {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.archived-info {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: var(--space-xs);
+    font-style: italic;
+}
+
+/* Categories Management */
+.categories-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+}
+
+.category-icon {
+    font-size: 1.5rem;
+}
+
+.category-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.category-badge {
+    font-size: 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--primary-solid);
+    color: white;
+    border-radius: var(--radius-full);
+}
+
+.category-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+/* Color Picker */
+.color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.color-picker-wrapper input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+/* Breathing Animation for Timer */
+.timer-circle.breathing {
+    animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+
+    0%,
+    100% {
+        transform: scale(0.92);
+        opacity: 0.85;
+    }
+
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
+.timer-background-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 450px;
+    height: 450px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    animation: pulse-glow 3s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        opacity: 0.2;
+        transform: translate(-50%, -50%) scale(0.85);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.25);
+    }
+}
+
+/* Motivational Phrase Animation */
+.motivational-phrase-rotate {
+    opacity: 0;
+    animation: fadeInUp 1s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dynamic Tagline */
+.tagline-ending {
+    background: var(--accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+/* Improved Action Notes */
+.action-notes-full {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--bg);
+    border-left: 3px solid var(--gold);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.action-notes-label {
+    font-weight: 600;
+    color: var(--gold);
+    display: block;
+    margin-bottom: var(--space-xs);
+}
+
+/* Settings Tagline Selector */
+.tagline-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+}
+
+.tagline-option {
+    padding: var(--space-sm);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tagline-option:hover {
+    border-color: var(--primary-solid);
+}
+
+.tagline-option.selected {
+    border-color: var(--primary-solid);
+    background: var(--surface);
+}
+
+/* Responsive V2.1 */
+@media (max-width: 640px) {
+    .goals-container {
+        grid-template-columns: 1fr;
+    }
+
+    .timer-background-animation {
+        width: 360px;
+        height: 360px;
+    }
+}

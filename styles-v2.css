@@ -1,0 +1,348 @@
+/* ============================================
+   FACTO V2 - Additional Styles
+   ============================================ */
+
+/* Dual Streaks */
+.streaks-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.streak-item {
+    text-align: center;
+    padding: var(--space-lg);
+    background: var(--accent);
+    border-radius: var(--radius);
+    color: white;
+}
+
+.streak-item:first-child {
+    background: var(--primary);
+}
+
+/* Goals List */
+.goals-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.goal-card {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    transition: var(--transition);
+    cursor: default;
+}
+
+.goal-card:hover {
+    border-color: var(--primary-solid);
+    box-shadow: var(--shadow);
+}
+
+.goal-card-new {
+    border-style: dashed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    cursor: pointer;
+}
+
+.goal-card-new:hover {
+    background: var(--surface);
+}
+
+.new-goal-content {
+    text-align: center;
+}
+
+.new-goal-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: var(--space-sm);
+}
+
+.new-goal-text {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.goal-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+}
+
+.goal-icon {
+    font-size: 1.5rem;
+}
+
+.goal-category {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.goal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: var(--space-xs);
+    line-height: 1.4;
+}
+
+.goal-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+    line-height: 1.6;
+}
+
+.goal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border);
+}
+
+.goal-stats {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.goal-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.btn-icon-small {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.btn-icon-small:hover {
+    background: var(--bg);
+}
+
+/* Empty States */
+.empty-state-goals {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+}
+
+.empty-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.motivational-text {
+    font-style: italic;
+    color: var(--gold);
+    font-size: 0.875rem;
+}
+
+.motivational-text-center {
+    text-align: center;
+    font-style: italic;
+    color: var(--gold);
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+}
+
+.motivational-big {
+    text-align: center;
+    font-style: italic;
+    color: var(--primary-solid);
+    font-size: 1.25rem;
+    margin: var(--space-lg) 0;
+    font-weight: 600;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--space-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-content h3 {
+    margin-bottom: var(--space-sm);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+.modal-actions .btn {
+    flex: 1;
+}
+
+/* Goal Selection List */
+.goal-selection-list {
+    margin: var(--space-md) 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.goal-select-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.goal-select-item:hover {
+    background: var(--bg);
+}
+
+.goal-select-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.goal-select-icon {
+    font-size: 1.25rem;
+}
+
+.goal-select-title {
+    flex: 1;
+    font-weight: 600;
+}
+
+/* Action Enhancements */
+.action-content {
+    flex: 1;
+}
+
+.action-goals {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: var(--space-xs);
+}
+
+.action-notes {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--gold);
+    margin-top: var(--space-xs);
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--gold);
+}
+
+.action-item.completed {
+    opacity: 0.7;
+}
+
+.action-goals-checkboxes {
+    margin: var(--space-md) 0;
+}
+
+.action-goal-checkbox {
+    display: block;
+    padding: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.action-goal-checkbox input {
+    margin-right: var(--space-sm);
+}
+
+/* Form Inputs */
+.input-text,
+.input-textarea,
+.input-select {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    transition: var(--transition);
+    margin-bottom: var(--space-md);
+}
+
+.input-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.input-text:focus,
+.input-textarea:focus,
+.input-select:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    margin-top: var(--space-md);
+    color: var(--text);
+}
+
+/* Responsive for V2 */
+@media (max-width: 640px) {
+    .goals-list {
+        grid-template-columns: 1fr;
+    }
+
+    .streaks-container {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: var(--space-md);
+    }
+}

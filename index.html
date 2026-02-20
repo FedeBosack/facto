@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="Facto - Focus & Action To Your Goals">
+
+    <title>Facto</title>
+
+    <!-- PWA Tags -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-v2.css">
+    <link rel="stylesheet" href="styles-v2.1.css">
+</head>
+
+<body>
+    <div id="facto-app">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen active">
+            <div class="logo-container">
+                <h1 class="logo">FACTO</h1>
+                <p class="tagline">Focus + Action To <span class="tagline-ending">Your Goals</span></p>
+            </div>
+        </div>
+
+        <!-- Onboarding Screen -->
+        <div id="onboarding-screen" class="screen">
+            <div class="container">
+                <h1 class="logo">FACTO</h1>
+                <p class="tagline">Focus + Action To <span class="tagline-ending">Your Goals</span></p>
+
+                <div class="onboarding-content">
+                    <p class="motivational-big">"La vida es una, pero el accionar cambia"</p>
+
+                    <div class="step">
+                        <div class="step-icon">🎯</div>
+                        <h3>1. Clarifica</h3>
+                        <p>Define tus metas con claridad. Sé específico, claro y directo.</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-icon">⏱️</div>
+                        <h3>2. Concéntrate</h3>
+                        <p>El focus es primordial. Minutos diarios de concentración en tus metas.</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-icon">✅</div>
+                        <h3>3. Acciona</h3>
+                        <p>La acción hay que hacerla, no te podés quedar sentado.</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="app.startApp()">Comenzar</button>
+            </div>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen">
+            <div class="container">
+                <header>
+                    <h2 class="logo-small">FACTO</h2>
+                    <div class="header-actions">
+                        <button class="icon-btn" onclick="app.showOnboardingFromHome()" title="Pasos FACTO">
+                            📖
+                        </button>
+                        <button class="icon-btn" onclick="app.toggleTheme()" title="Cambiar tema">
+                            <span id="theme-icon">🌙</span>
+                        </button>
+                        <button class="icon-btn" onclick="app.showSettings()" title="Configuración">
+                            ⚙️
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Your Progress -->
+                <div class="streaks-container">
+                    <div class="streak-item">
+                        <div class="streak-number" id="concentration-streak">0</div>
+                        <div class="streak-label">Focus 🎯</div>
+                    </div>
+                    <div class="streak-item">
+                        <div class="streak-number" id="action-streak">0</div>
+                        <div class="streak-label">Action ✅</div>
+                    </div>
+                </div>
+
+                <!-- HOY Section (only concentration/visualization) -->
+                <div class="action-section">
+                    <h3>Hoy</h3>
+
+                    <!-- Timer Card -->
+                    <div class="timer-card">
+                        <div class="timer-level">
+                            <span>Nivel: </span>
+                            <span id="current-level">1 min</span>
+                        </div>
+                        <button class="btn btn-primary btn-large" onclick="app.startConcentration()"
+                            id="concentrate-btn">
+                            🧠 Visualizar Ahora
+                        </button>
+                        <div class="timer-progress-info">
+                            <span id="timer-progress-text">Completa 3 días para subir de nivel</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOCUS TO Section -->
+                <div class="main-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>🎯 Focus To</h3>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <button class="btn-icon-small" onclick="app.showCreateGoalScreen()"
+                                title="Nuevo Focus">➕</button>
+                            <button class="btn-icon-small" onclick="app.showGoalsScreen()" title="Gestionar">⚙️</button>
+                        </div>
+                    </div>
+                    <div id="goals-list" class="goals-list">
+                        <!-- Goals will be rendered here (compact) -->
+                    </div>
+                </div>
+
+                <!-- ACTIONS TO Section -->
+                <div class="main-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>✅ Actions To</h3>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <button class="btn-icon-small" onclick="app.showCreateActionScreen()"
+                                title="Nueva Acción">➕</button>
+                            <button class="btn-icon-small" onclick="app.showActionsScreen()"
+                                title="Gestionar">⚙️</button>
+                        </div>
+                    </div>
+                    <div id="actions-to-list">
+                        <!-- Actions grouped by goal will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goals Management Screen -->
+        <div id="goals-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.showScreen('home-screen'); app.renderHome();">← Home</button>
+
+                <h2>Gestión de Metas</h2>
+                <p class="motivational-text">"Focus + Action To <span class="tagline-ending">Your Goals</span>"</p>
+
+                <button class="btn btn-primary" onclick="app.showCreateGoalScreen()">+ Nueva Meta</button>
+
+                <div class="goals-screen-tabs">
+                    <button class="tab-button active" onclick="app.showGoalsTab('active')">Activas</button>
+                    <button class="tab-button" onclick="app.showGoalsTab('archived')">Archivadas</button>
+                </div>
+
+                <div id="active-goals-container" class="goals-container">
+                    <!-- Active goals will be rendered here -->
+                </div>
+
+                <div id="archived-goals-container" class="goals-container" style="display: none;">
+                    <!-- Archived goals will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Management Screen -->
+        <div id="actions-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.showScreen('home-screen'); app.renderHome();">← Home</button>
+
+                <h2>✅ Actions To</h2>
+                <p class="motivational-text">"La acción hay que hacerla, no te podés quedar sentado"</p>
+
+                <button class="btn btn-primary" onclick="app.showCreateActionScreen()">+ Nueva Acción</button>
+
+                <!-- Filters -->
+                <div id="actions-screen-filters" style="display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap;">
+                    <select id="filter-focus" onchange="app.applyActionsScreenFilter()"
+                        style="flex: 1; min-width: 120px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text); font-size: 0.85rem;">
+                        <option value="all">Todos los Focus</option>
+                    </select>
+                    <select id="filter-status" onchange="app.applyActionsScreenFilter()"
+                        style="flex: 1; min-width: 120px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text); font-size: 0.85rem;">
+                        <option value="all">Todas</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="completed">Completadas</option>
+                    </select>
+                </div>
+
+                <div id="filtered-actions-container" class="goals-container">
+                    <!-- Filtered actions cards will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Goal Screen -->
+        <div id="create-goal-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.cancelGoalEdit()">← Atrás</button>
+
+                <h2 id="goal-form-title">Nueva Meta</h2>
+                <p class="subtitle">"Sé específico, claro y directo. La claridad es poder."</p>
+
+                <input type="hidden" id="goal-id-input">
+
+                <label>Categoría:</label>
+                <select id="goal-category-select" class="input-select">
+                    <option value="meta">🎯 Meta</option>
+                </select>
+                <button class="btn-small btn-secondary" onclick="app.showCategoriesScreen()">Gestionar
+                    Categorías</button>
+
+                <label>¿Qué quieres lograr?</label>
+                <input type="text" id="goal-title-input" placeholder="Título de tu meta" class="input-text">
+
+                <label>Describe (opcional):</label>
+                <textarea id="goal-description-input" placeholder="Detalles adicionales..." rows="3"
+                    class="input-textarea"></textarea>
+
+                <button class="btn btn-primary" onclick="app.saveGoal()">Guardar Meta</button>
+            </div>
+        </div>
+
+        <!-- Categories Management Screen -->
+        <div id="categories-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.showGoalsScreen()">← Metas</button>
+
+                <h2>Gestión de Categorías</h2>
+                <p class="subtitle">Personaliza tus categorías</p>
+
+                <button class="btn btn-primary" onclick="app.showCreateCategoryScreen()">+ Nueva Categoría</button>
+
+                <div id="categories-list" class="categories-list">
+                    <!-- Categories will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Category Screen -->
+        <div id="create-category-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.cancelCategoryEdit()">← Atrás</button>
+
+                <h2 id="category-form-title">Nueva Categoría</h2>
+
+                <input type="hidden" id="category-id-input">
+
+                <label>Nombre:</label>
+                <input type="text" id="category-name-input" placeholder="Ej: Amor, Familia, Trabajo..."
+                    class="input-text">
+
+                <label>Ícono (emoji):</label>
+                <input type="text" id="category-icon-input" placeholder="💕" class="input-text" maxlength="2">
+
+                <label>Color:</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="category-color-input" value="#667eea">
+                    <span id="color-preview">Vista previa</span>
+                </div>
+
+                <button class="btn btn-primary" onclick="app.saveCategory()">Guardar Categoría</button>
+            </div>
+        </div>
+
+        <!-- Concentrate Screen -->
+        <div id="concentrate-screen" class="screen">
+            <div class="container concentrate-container">
+                <button class="back-btn" onclick="app.stopConcentration()">✕ Salir</button>
+
+                <p class="motivational-text-center motivational-phrase-rotate">"El focus es primordial"</p>
+
+                <div class="timer-display">
+                    <div class="timer-background-animation"></div>
+                    <div id="timer-circle" class="timer-circle breathing">
+                        <svg viewBox="0 0 200 200">
+                            <circle cx="100" cy="100" r="90" class="timer-bg"></circle>
+                            <circle cx="100" cy="100" r="90" class="timer-progress" id="timer-progress-circle"></circle>
+                        </svg>
+                        <div class="timer-text" id="timer-text">5:00</div>
+                    </div>
+                </div>
+
+                <div class="manifestation-focus" id="manifestation-focus"></div>
+
+                <div class="concentrate-controls">
+                    <button class="icon-btn large" onclick="app.toggleTimer()" id="play-pause-btn">
+                        ▶️
+                    </button>
+                    <button class="icon-btn large" onclick="app.toggleMusic()" id="music-btn">
+                        🔇
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Action Screen -->
+        <div id="create-action-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.cancelActionEdit()">← Atrás</button>
+
+                <h2>Tu Acción de Hoy</h2>
+                <p class="subtitle">"La acción hay que hacerla, no te podés quedar sentado"</p>
+
+                <input type="hidden" id="action-id-input">
+
+                <label>¿Qué acción harás HOY?</label>
+                <textarea id="action-text-input" placeholder="Describe tu acción específica..." rows="3"
+                    class="input-textarea"></textarea>
+
+                <label>Enlazar a metas:</label>
+                <div id="action-goals-checkboxes" class="action-goals-checkboxes">
+                    <!-- Goal checkboxes will be rendered here -->
+                </div>
+
+                <label>Notas/Resultados (opcional):</label>
+                <textarea id="action-notes-input" placeholder="¿Qué lograste con esta acción?" rows="2"
+                    class="input-textarea"></textarea>
+
+                <!-- Pros/Cons Analysis -->
+                <div class="pros-cons-section"
+                    style="margin-top: 16px; padding: 14px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
+                    <h3 style="font-size: 0.95rem; margin-bottom: 10px;">⚖️ Análisis Ventajas / Desventajas</h3>
+                    <label style="color: #22c55e; font-weight: 600; font-size: 0.85rem;">✅ Ventajas:</label>
+                    <textarea id="action-pros-input"
+                        placeholder="Ej: Me acerca a mi meta, desarrollo nuevas habilidades..." rows="2"
+                        class="input-textarea" style="margin-bottom: 8px;"></textarea>
+                    <label style="color: #ef4444; font-weight: 600; font-size: 0.85rem;">❌ Desventajas:</label>
+                    <textarea id="action-cons-input" placeholder="Ej: Requiere mucho tiempo, costo elevado..." rows="2"
+                        class="input-textarea" style="margin-bottom: 8px;"></textarea>
+                    <label style="font-weight: 600; font-size: 0.85rem;">📊 Porcentaje Ventajas:</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="action-pros-pct" min="0" max="100" value="50"
+                            oninput="app.updateProsConsBar()" style="flex: 1;">
+                        <span id="pros-pct-label" style="font-weight: 700; font-size: 0.9rem;">50%</span>
+                    </div>
+                    <div id="pros-cons-bar"
+                        style="height: 8px; border-radius: 4px; margin-top: 6px; overflow: hidden; display: flex;">
+                        <div style="width: 50%; background: #22c55e; transition: width 0.3s;"></div>
+                        <div style="width: 50%; background: #ef4444; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="pros-cons-verdict"
+                        style="text-align: center; margin-top: 6px; font-size: 0.8rem; font-weight: 600;">Equilibrado
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="app.saveAction()" style="margin-top: 16px;">Guardar
+                    Acción</button>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.closeSettings()">← Atrás</button>
+
+                <h2>Configuración</h2>
+
+                <div class="setting-group">
+                    <h3>Tagline Personalizado</h3>
+                    <p class="small-text">Focus + Action To...</p>
+                    <div id="tagline-selector" class="tagline-options">
+                        <!-- Tagline options will be rendered here -->
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Recordatorio Diario</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="reminder-toggle" onchange="app.toggleReminder()">
+                        <span class="slider"></span>
+                    </label>
+                    <div id="reminder-time-picker" class="hidden">
+                        <label>Hora del recordatorio:</label>
+                        <input type="time" id="reminder-time" value="09:00">
+                        <button class="btn btn-secondary" onclick="app.saveReminderTime()">Guardar</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Configuración del Timer</h3>
+                    <p>Nivel actual: <strong id="settings-level">1</strong></p>
+
+                    <label>Tipo de progresión:</label>
+                    <select id="progression-type" class="input-select">
+                        <option value="minutes">Minutos</option>
+                        <option value="seconds">Segundos</option>
+                    </select>
+
+                    <label>Incremento por nivel:</label>
+                    <input type="number" id="increment-amount" value="1" min="1" class="input-text">
+
+                    <label>Días para subir de nivel:</label>
+                    <input type="number" id="days-for-levelup" value="3" min="1" class="input-text">
+
+                    <button class="btn btn-secondary" onclick="app.saveTimerSettings()">Guardar</button>
+                </div>
+
+                <div class="setting-group">
+                    <h3>✨ Personalización del Logo</h3>
+                    <label for="tagline-select">Tagline "Focus + Action To..."</label>
+                    <select id="tagline-select" class="input-select" onchange="app.setTaglineEnding(this.value)">
+                        <option value="Your Goals">Your Goals (Tus Metas)</option>
+                        <option value="Your Dreams">Your Dreams (Tus Sueños)</option>
+                        <option value="Your Desires">Your Desires (Tus Deseos)</option>
+                        <option value="Lo Que Necesites">Lo Que Necesites</option>
+                        <option value="Your Vision">Your Vision (Tu Visión)</option>
+                        <option value="Your Future">Your Future (Tu Futuro)</option>
+                    </select>
+                </div>
+
+                <div class="setting-group danger-zone">
+                    <h3>Zona de Peligro</h3>
+                    <button class="btn btn-danger" onclick="app.resetApp()">Reiniciar Todo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Selection Modal -->
+        <div id="goal-selection-modal" class="modal">
+            <div class="modal-content">
+                <h3>¿En qué te concentrarás?</h3>
+                <p class="motivational-text">"El focus es primordial"</p>
+
+                <div id="goal-selection-list" class="goal-selection-list">
+                    <!-- Goals will be rendered as checkboxes -->
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="app.cancelGoalSelection()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="app.confirmGoalSelection()">Comenzar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Screen -->
+        <div id="history-screen" class="screen">
+            <div class="container">
+                <button class="back-btn" onclick="app.showScreen('home-screen'); app.renderHome();">← Home</button>
+                <h2>📋 Historial</h2>
+                <p class="subtitle">Acciones pasadas y eventos</p>
+                <div id="history-container">
+                    <!-- History will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Force Service Worker update on every page load
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => {
+                    reg.update();
+                    // If there's a waiting worker, activate it immediately
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                });
+            });
+        }
+    </script>
+    <script src="app.js"></script>
+</body>
+
+</html>
