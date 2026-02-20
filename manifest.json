@@ -2,7 +2,7 @@
   "name": "Facto",
   "short_name": "Facto",
   "description": "Focus + Action to Goal. Manifiesta tu vida en 5 minutos diarios.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",
@@ -21,6 +21,10 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "lifestyle", "health"],
+  "categories": [
+    "productivity",
+    "lifestyle",
+    "health"
+  ],
   "lang": "es"
 }

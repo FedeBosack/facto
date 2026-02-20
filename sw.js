@@ -1,14 +1,14 @@
 // Service Worker for Facto PWA - V2.1
 // Strategy: Network-First (always try to get the latest version)
-const CACHE_NAME = 'facto-v2.3';
+const CACHE_NAME = 'facto-v2.4';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/styles-v2.css',
-    '/styles-v2.1.css',
-    '/app.js',
-    '/manifest.json'
+    './',
+    './index.html',
+    './styles.css',
+    './styles-v2.css',
+    './styles-v2.1.css',
+    './app.js',
+    './manifest.json'
 ];
 
 // Install event - cache files and skip waiting immediately
@@ -58,6 +58,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('notificationclick', event => {
     event.notification.close();
     event.waitUntil(
-        clients.openWindow('/')
+        clients.openWindow('./')
     );
 });
