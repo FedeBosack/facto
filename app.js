@@ -61,6 +61,7 @@ const app = {
 
         // UI State
         theme: 'light',
+        focusSound: 'focus_brown.wav',
         reminderEnabled: false,
         reminderTime: '09:00',
         timerRunning: false,
@@ -77,7 +78,6 @@ const app = {
 
     init() {
         this.applyTheme();
-        this.setupAudioUnlocker();
         this.setupServiceWorker();
         this.requestNotificationPermission();
         this.setupAuth();
@@ -306,6 +306,7 @@ const app = {
             actionStreak: 0,
             lastActionDate: null,
             theme: oldData.theme || 'light',
+            focusSound: oldData.focusSound || 'focus_brown.wav',
             reminderEnabled: oldData.reminderEnabled || false,
             reminderTime: oldData.reminderTime || '09:00',
             timerRunning: false,
@@ -1003,46 +1004,21 @@ const app = {
     },
 
     playMusic() {
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
-        // Always try to resume context (crucial for mobile after locking screen)
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-
-        // Si el oscilador ya existe, simplemente le subimos el volumen al nivel audible
-        if (this.oscillator && this.gainNode) {
-            this.gainNode.gain.setTargetAtTime(0.1, this.audioContext.currentTime, 0.015);
+        const audio = document.getElementById('focus-audio');
+        if (audio) {
+            audio.src = this.data.focusSound || 'focus_brown.wav';
+            audio.play().catch(e => console.log('Audio playback failed in iOS:', e));
             this.data.musicPlaying = true;
-            return;
         }
-
-        this.oscillator = this.audioContext.createOscillator();
-        this.gainNode = this.audioContext.createGain();
-
-        this.oscillator.type = 'sine';
-        this.oscillator.frequency.setValueAtTime(174.61, this.audioContext.currentTime);
-        this.gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
-
-        this.oscillator.connect(this.gainNode);
-        this.gainNode.connect(this.audioContext.destination);
-
-        // Empieza a sonar y no se detiene más con stop() para engañar al background limits
-        this.oscillator.start();
-
-        this.data.musicPlaying = true;
     },
 
     stopMusic() {
-        if (this.gainNode) {
-            // En lugar de matar el nodo de audio (lo cual permite al teléfono suspender el JS), 
-            // simplemente bajamos el volumen a imperceptible, pero el sonido sigue calculándose 
-            // silenciosamente, manteniendo la App viva en background.
-            this.gainNode.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.015);
+        const audio = document.getElementById('focus-audio');
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+            this.data.musicPlaying = false;
         }
-        this.data.musicPlaying = false;
     },
 
     // ============================================
@@ -2087,6 +2063,29 @@ const app = {
         const reminderTime = document.getElementById('reminder-time');
         if (reminderTime) {
             reminderTime.value = this.data.reminderTime || '09:00';
+        }
+        const soundSelect = document.getElementById('focus-sound-select');
+        if (soundSelect) {
+            soundSelect.value = this.data.focusSound || 'focus_brown.wav';
+        }
+    },
+
+    saveFocusSound() {
+        const soundSelect = document.getElementById('focus-sound-select');
+        if (soundSelect) {
+            this.data.focusSound = soundSelect.value;
+            this.saveData();
+
+            // Preview sound briefly
+            const audio = document.getElementById('focus-audio');
+            if (audio) {
+                audio.src = this.data.focusSound;
+                audio.play().catch(e => console.log(e));
+                setTimeout(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }, 2000);
+            }
         }
     },
 

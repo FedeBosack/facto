@@ -18,6 +18,9 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="styles-v2.css">
     <link rel="stylesheet" href="styles-v2.1.css">
+
+    <!-- Sonido Nativo de Alarma -->
+    <audio id="focus-audio" src="focus_noise.wav" preload="auto" loop></audio>
 </head>
 
 <body>
@@ -434,7 +437,23 @@
                     <label>Días para subir de nivel:</label>
                     <input type="number" id="days-for-levelup" value="3" min="1" class="input-text">
 
-                    <button class="btn btn-secondary" onclick="app.saveTimerSettings()">Guardar</button>
+                    <!-- SELECCION DE SONIDO -->
+                    <label style="margin-top: 15px;">Sonido de Enfoque:</label>
+                    <select id="focus-sound-select" class="input-select" onchange="app.saveFocusSound()">
+                        <option value="focus_white.wav">🤍 Ruido Blanco (Concentración Total)</option>
+                        <option value="focus_pink.wav">🌸 Ruido Rosa (Suavidad y Enfoque)</option>
+                        <option value="focus_brown.wav">🟤 Ruido Marrón (Profundo, tipo cascada)</option>
+                        <option value="focus_rain.wav">🌧️ Lluvia Sintética (Relax)</option>
+                        <option value="focus_wind.wav">🌬️ Viento Nocturno (Fluctuaciones sutiles)</option>
+                        <option value="focus_432hz.wav">🧘 Frecuencia 432 Hz (Sanación)</option>
+                        <option value="focus_528hz.wav">✨ Frecuencia 528 Hz (Reparación)</option>
+                        <option value="focus_space.wav">🌌 Espacio Profundo (Sci-Fi Atmosférico)</option>
+                        <option value="focus_alpha.wav">🧠 Onda Alfa (Relajación Creativa)</option>
+                        <option value="focus_theta.wav">💤 Onda Theta (Meditación Profunda)</option>
+                    </select>
+
+                    <button class="btn btn-secondary" style="margin-top: 15px;"
+                        onclick="app.saveTimerSettings()">Guardar Configuración</button>
                 </div>
 
                 <div class="setting-group">
