@@ -77,6 +77,7 @@ const app = {
 
     init() {
         this.applyTheme();
+        this.setupAudioUnlocker();
         this.setupServiceWorker();
         this.requestNotificationPermission();
         this.setupAuth();
@@ -171,6 +172,49 @@ const app = {
     showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
+    },
+
+    // ============================================
+    // AUDIO UNLOCKER FOR MOBILE (iOS/Android)
+    // ============================================
+
+    setupAudioUnlocker() {
+        // Create context early
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.audioUnlocked = false;
+
+        const unlock = () => {
+            if (this.audioUnlocked) return;
+
+            // Resume context if suspended
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+
+            // Play a silent oscillator for 1ms to properly unlock the audio context in WebKit
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            gainNode.gain.value = 0; // Pure silence
+
+            osc.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.001);
+
+            this.audioUnlocked = true;
+            console.log("Audio Context successfully unlocked for mobile.");
+
+            // Remove listeners
+            document.removeEventListener('touchstart', unlock);
+            document.removeEventListener('mousedown', unlock);
+            document.removeEventListener('keydown', unlock);
+        };
+
+        // Attach to first user interactions
+        document.addEventListener('touchstart', unlock, { once: true, passive: true });
+        document.addEventListener('mousedown', unlock, { once: true });
+        document.addEventListener('keydown', unlock, { once: true });
     },
 
     // ============================================
@@ -959,7 +1003,21 @@ const app = {
     },
 
     playMusic() {
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // Always try to resume context (crucial for mobile after locking screen)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        // Clean up previous oscillators
+        if (this.oscillator) {
+            this.oscillator.stop();
+            this.oscillator.disconnect();
+        }
+
         this.oscillator = this.audioContext.createOscillator();
         this.gainNode = this.audioContext.createGain();
 
@@ -977,9 +1035,10 @@ const app = {
     stopMusic() {
         if (this.oscillator) {
             this.oscillator.stop();
-            this.audioContext.close();
-            this.data.musicPlaying = false;
+            this.oscillator.disconnect();
+            this.oscillator = null;
         }
+        this.data.musicPlaying = false;
     },
 
     // ============================================
