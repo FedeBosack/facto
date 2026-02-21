@@ -361,12 +361,6 @@ const app = {
         // Totalizador de acciones globales
         document.getElementById('action-streak').textContent = this.data.actions.filter(a => a.completed).length;
 
-        // Focus Hoy count
-        const today = new Date().toDateString();
-        const focusTodayCount = (this.data.history || []).filter(h => h.type === 'concentration' && h.date === today).length;
-        const focusTodayEl = document.getElementById('focus-today-count');
-        if (focusTodayEl) focusTodayEl.textContent = focusTodayCount;
-
         // Update tagline
         this.updateTagline();
 
@@ -2209,6 +2203,39 @@ const app = {
         }
 
         this.showScreen('history-screen');
+    },
+
+    // Focus History Modal
+    showFocusHistoryModal() {
+        const container = document.getElementById('focus-history-list');
+        if (!container) return;
+
+        // Filter only concentration history
+        const focusHistory = (this.data.history || []).filter(h => h.type === 'concentration').slice().reverse();
+
+        if (focusHistory.length === 0) {
+            container.innerHTML = '<p class="empty-text" style="text-align: center; padding: 20px;">No hay Focus registrados</p>';
+        } else {
+            container.innerHTML = focusHistory.map(entry => {
+                // Formatting time if it's an ISO date or just a string
+                // Entry date is saved as `new Date().toDateString()` (e.g. "Thu Oct 12 2023")
+                // Though in later upgrades we might save time too. For now let's just display what we have.
+                return `
+                    <div style="padding: 10px; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; border-left: 3px solid var(--primary);">
+                        <div style="font-weight: 600; margin-bottom: 2px;">⏱️ Focus completado (Nivel ${entry.level || 1})</div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">📅 ${entry.date}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        const modal = document.getElementById('focus-history-modal');
+        if (modal) modal.style.display = 'flex';
+    },
+
+    closeFocusHistoryModal() {
+        const modal = document.getElementById('focus-history-modal');
+        if (modal) modal.style.display = 'none';
     },
 
     // Utility functions

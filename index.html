@@ -118,11 +118,7 @@
                 <div class="streaks-container">
                     <div class="streak-item">
                         <div class="streak-number" id="concentration-streak">0</div>
-                        <div class="streak-label">Racha Focus 🎯</div>
-                    </div>
-                    <div class="streak-item">
-                        <div class="streak-number" id="focus-today-count">0</div>
-                        <div class="streak-label">Focus Hoy ⏱️</div>
+                        <div class="streak-label">Focus 🎯</div>
                     </div>
                     <div class="streak-item">
                         <div class="streak-number" id="action-streak">0</div>
@@ -136,9 +132,15 @@
 
                     <!-- Timer Card -->
                     <div class="timer-card">
-                        <div class="timer-level">
-                            <span>Nivel: </span>
-                            <span id="current-level">1 min</span>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div class="timer-level">
+                                <span>Nivel: </span>
+                                <span id="current-level">1 min</span>
+                            </div>
+                            <button class="btn-icon-small" onclick="app.showFocusHistoryModal()"
+                                title="Historial de Focus"
+                                style="font-size: 1.2rem; background: none; border: none;">🕒</button>
                         </div>
                         <button class="btn btn-primary btn-large" onclick="app.startConcentration()"
                             id="concentrate-btn">
@@ -519,6 +521,24 @@
                 <div class="modal-actions">
                     <button class="btn btn-secondary" onclick="app.cancelGoalSelection()">Cancelar</button>
                     <button class="btn btn-primary" onclick="app.confirmGoalSelection()">Comenzar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Focus History Modal -->
+        <div id="focus-history-modal" class="modal">
+            <div class="modal-content" style="max-height: 80vh; display: flex; flex-direction: column;">
+                <h3>🕒 Historial de Focus</h3>
+                <p class="subtitle">Tus sesiones de concentración pasadas</p>
+
+                <div id="focus-history-list"
+                    style="overflow-y: auto; flex: 1; margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Focus history renders here -->
+                </div>
+
+                <div class="modal-actions" style="margin-top: 15px;">
+                    <button class="btn btn-primary" style="width: 100%;"
+                        onclick="app.closeFocusHistoryModal()">Cerrar</button>
                 </div>
             </div>
         </div>
