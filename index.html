@@ -118,7 +118,11 @@
                 <div class="streaks-container">
                     <div class="streak-item">
                         <div class="streak-number" id="concentration-streak">0</div>
-                        <div class="streak-label">Focus 🎯</div>
+                        <div class="streak-label">Racha Focus 🎯</div>
+                    </div>
+                    <div class="streak-item">
+                        <div class="streak-number" id="focus-today-count">0</div>
+                        <div class="streak-label">Focus Hoy ⏱️</div>
                     </div>
                     <div class="streak-item">
                         <div class="streak-number" id="action-streak">0</div>
@@ -525,7 +529,7 @@
                 <button class="back-btn" onclick="app.showScreen('home-screen'); app.renderHome();">← Home</button>
                 <h2>📋 Historial</h2>
                 <p class="subtitle">Acciones pasadas y eventos</p>
-                <div id="history-container">
+                <div id="history-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
                     <!-- History will be rendered here -->
                 </div>
             </div>

@@ -361,6 +361,12 @@ const app = {
         // Totalizador de acciones globales
         document.getElementById('action-streak').textContent = this.data.actions.filter(a => a.completed).length;
 
+        // Focus Hoy count
+        const today = new Date().toDateString();
+        const focusTodayCount = (this.data.history || []).filter(h => h.type === 'concentration' && h.date === today).length;
+        const focusTodayEl = document.getElementById('focus-today-count');
+        if (focusTodayEl) focusTodayEl.textContent = focusTodayCount;
+
         // Update tagline
         this.updateTagline();
 
@@ -525,7 +531,7 @@ const app = {
         const allActions = this.data.actions.filter(a => a.date !== today);
         if (allActions.length > 0) {
             actionDisplay.innerHTML += `
-                <button class="btn-link" style="margin-top: 12px; font-size: 0.85rem; color: var(--primary); cursor: pointer; background: none; border: none;" onclick="app.showHistoryScreen()">📋 Ver historial de acciones (${allActions.length})</button>
+                <button class="btn-link" style="margin-top: 12px; font-size: 0.85rem; color: var(--primary); cursor: pointer; background: none; border: none;" onclick="app.showHistoryScreen()">📋 Ver historial completo (${this.data.history ? this.data.history.length : 0})</button>
             `;
         }
     },
@@ -2183,13 +2189,22 @@ const app = {
             container.innerHTML = '<p class="empty-text" style="text-align: center; padding: 20px;">No hay historial aún</p>';
         } else {
             container.innerHTML = history.map(entry => {
-                const action = this.data.actions.find(a => a.id === entry.actionId);
-                return `
-                    <div style="padding: 10px; background: var(--card-bg); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem;">
-                        <span>✅</span> ${action ? this.escapeHtml(action.text) : 'Acción eliminada'} 
-                        <span style="color: var(--text-secondary); font-size: 0.75rem;">${entry.date}</span>
-                    </div>
-                `;
+                if (entry.type === 'concentration') {
+                    return `
+                        <div style="padding: 10px; background: var(--card-bg); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem; border-left: 3px solid var(--primary);">
+                            <span>⏱️</span> Sesión de Focus (Nivel ${entry.level || 1})
+                            <span style="color: var(--text-secondary); font-size: 0.75rem;">${entry.date}</span>
+                        </div>
+                    `;
+                } else {
+                    const action = this.data.actions.find(a => a.id === entry.actionId);
+                    return `
+                        <div style="padding: 10px; background: var(--card-bg); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem;">
+                            <span>✅</span> ${action ? this.escapeHtml(action.text) : 'Acción eliminada'} 
+                            <span style="color: var(--text-secondary); font-size: 0.75rem;">${entry.date}</span>
+                        </div>
+                    `;
+                }
             }).join('');
         }
 
