@@ -1188,6 +1188,38 @@ const app = {
         });
     },
 
+    sendTestNotification() {
+        if (!('Notification' in window)) {
+            alert('⚠️ Tu navegador no soporta notificaciones.');
+            return;
+        }
+        if (Notification.permission !== 'granted') {
+            alert('🔔 Primero solicitá permiso de notificaciones.');
+            return;
+        }
+
+        const title = 'Facto 🎯';
+        const options = {
+            body: '¡Hola! El recordatorio diario está funcionando correctamente ✅',
+            icon: 'icon-192.png',
+            badge: 'icon-192.png'
+        };
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, options).catch(e => {
+                    alert('Error al enviar (SW): ' + e.message);
+                });
+            });
+        } else {
+            try {
+                new Notification(title, options);
+            } catch (e) {
+                alert('Error al enviar la notificación: ' + e.message);
+            }
+        }
+    },
+
     scheduleNotification() {
         if (!('Notification' in window) || Notification.permission !== 'granted') {
             return;
@@ -1213,14 +1245,24 @@ const app = {
                 if (lastNotifDate !== today) {
                     this.data.lastNotifDate = today;
                     this.saveData();
-                    try {
-                        new Notification('Facto 🎯', {
-                            body: 'Es hora de concentrarte en tus metas',
-                            icon: 'icon-192.png',
-                            badge: 'icon-192.png'
+
+                    const title = 'Facto 🎯';
+                    const options = {
+                        body: 'Es hora de concentrarte en tus metas',
+                        icon: 'icon-192.png',
+                        badge: 'icon-192.png'
+                    };
+
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification(title, options).catch(e => console.log('SW Notification error:', e));
                         });
-                    } catch (e) {
-                        console.log('Notification error:', e);
+                    } else {
+                        try {
+                            new Notification(title, options);
+                        } catch (e) {
+                            console.log('Notification error:', e);
+                        }
                     }
                 }
             }
@@ -2407,20 +2449,7 @@ const app = {
         }
     },
 
-    toggleReminder() {
-        const check = document.getElementById('reminder-check');
-        this.data.reminderEnabled = check.checked;
-        this.saveData();
-    },
-
-    saveReminderTime() {
-        const time = document.getElementById('reminder-time');
-        if (time) {
-            this.data.reminderTime = time.value;
-            this.saveData();
-            alert('Hora guardada ✅');
-        }
-    },
+    // (toggleReminder and saveReminderTime defined above in SETTINGS section)
 
     exportData() {
         const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
