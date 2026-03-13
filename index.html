@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="styles-v2.1.css">
     <!-- Sonido Nativo de Alarma -->
     <audio id="focus-audio" src="assets/sounds/focus_brown.wav" preload="auto" loop></audio>
+    <!-- Audio Lucky Generator -->
+    <audio id="lucky-audio" src="assets/sounds/7 Power Manifesting The Luck Generator.mp3" preload="auto" loop></audio>
 </head>
 
 <body>
@@ -105,6 +107,9 @@
                         <button class="icon-btn" onclick="app.showOnboardingFromHome()" title="Pasos FACTO">
                             📖
                         </button>
+                        <button class="icon-btn" onclick="app.showLuckyScreen()" title="Lucky Generator" id="lucky-btn">
+                            🍀
+                        </button>
                         <button class="icon-btn" onclick="app.toggleTheme()" title="Cambiar tema">
                             <span id="theme-icon">🌙</span>
                         </button>
@@ -123,6 +128,10 @@
                     <div class="streak-item">
                         <div class="streak-number" id="action-streak">0</div>
                         <div class="streak-label">Action ✅</div>
+                    </div>
+                    <div class="streak-item">
+                        <div class="streak-number" id="lucky-streak">0</div>
+                        <div class="streak-label">Lucky 🍀</div>
                     </div>
                 </div>
 
@@ -411,20 +420,40 @@
                     </div>
                 </div>
 
-                <!-- Sección de Notificaciones Ocultada Temporalmente dada la limitación Local PWA en iOS/Android
                 <div class="setting-group">
-                    <h3>Recordatorio Diario</h3>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="reminder-toggle" onchange="app.toggleReminder()">
-                        <span class="slider"></span>
-                    </label>
-                    <div id="reminder-time-picker" class="hidden">
-                        <label>Hora del recordatorio:</label>
-                        <input type="time" id="reminder-time" value="09:00">
-                        <button class="btn btn-secondary" onclick="app.saveReminderTime()">Guardar</button>
+                    <h3>🔔 Recordatorio Diario</h3>
+                    <p class="small-text" id="notif-permission-status">Cargando estado...</p>
+
+                    <!-- Time picker — always visible -->
+                    <div style="margin: 14px 0;">
+                        <label
+                            style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px; color:var(--text-secondary);">
+                            🕐 Hora del recordatorio
+                        </label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="time" id="reminder-time" value="09:00"
+                                style="flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; background:var(--bg-secondary); color:var(--text); font-size:1rem; font-weight:600;">
+                            <button class="btn btn-primary" onclick="app.saveReminderTime()"
+                                style="white-space:nowrap; padding:10px 16px;">
+                                💾 Guardar
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Toggle -->
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="reminder-toggle" onchange="app.toggleReminder()">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-size:0.9rem;">Activar recordatorio diario</span>
+                    </div>
+
+                    <!-- Request permission button -->
+                    <button class="btn btn-secondary" style="width:100%;"
+                        onclick="app.requestNotificationPermission(true)">🔔 Solicitar Permiso de
+                        Notificaciones</button>
                 </div>
-                -->
 
                 <div class="setting-group">
                     <h3>Configuración del Timer</h3>
@@ -539,6 +568,85 @@
                 <div class="modal-actions" style="margin-top: 15px;">
                     <button class="btn btn-primary" style="width: 100%;"
                         onclick="app.closeFocusHistoryModal()">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lucky Generator Screen -->
+        <div id="lucky-screen" class="screen lucky-screen-bg">
+            <div class="container concentrate-container">
+                <button class="back-btn lucky-back-btn" onclick="app.stopLucky()">✕ Salir</button>
+
+                <div class="lucky-header">
+                    <div class="lucky-emoji-icon">🍀</div>
+                    <h2 class="lucky-title">Lucky Generator</h2>
+                    <p class="lucky-subtitle">"Manifesta tu suerte mientras escuchás"</p>
+                </div>
+
+                <!-- Audio visual wave -->
+                <div class="lucky-wave-container" id="lucky-wave">
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                    <div class="lucky-wave-bar"></div>
+                </div>
+
+                <!-- Play / Pause -->
+                <div class="concentrate-controls" style="margin-bottom: 16px;">
+                    <button class="icon-btn large lucky-play-btn-style" onclick="app.toggleLuckyAudio()"
+                        id="lucky-play-btn">▶️</button>
+                </div>
+
+                <!-- Audio player controls -->
+                <div class="lucky-player-panel">
+                    <!-- Seek / timeline bar -->
+                    <div class="lucky-seek-row">
+                        <span class="lucky-time" id="lucky-current-time">0:00</span>
+                        <input type="range" id="lucky-seek-bar" class="lucky-seek-bar" min="0" max="100" step="0.1"
+                            value="0" oninput="app.seekLuckyAudio(this.value)" onmousedown="app._luckySeeking=true"
+                            onmouseup="app._luckySeeking=false" ontouchstart="app._luckySeeking=true"
+                            ontouchend="app._luckySeeking=false">
+                        <span class="lucky-time" id="lucky-total-time">0:00</span>
+                    </div>
+                    <!-- Skip buttons -->
+                    <div class="lucky-skip-row">
+                        <button class="lucky-skip-btn" onclick="app.skipLucky(-30)" title="30s atrás">⏮ 30s</button>
+                        <button class="lucky-skip-btn" onclick="app.skipLucky(-10)" title="10s atrás">⏪ 10s</button>
+                        <button class="lucky-skip-btn" onclick="app.skipLucky(10)" title="10s adelante">10s ⏩</button>
+                        <button class="lucky-skip-btn" onclick="app.skipLucky(30)" title="30s adelante">30s ⏭</button>
+                    </div>
+                    <!-- Speed row -->
+                    <div class="lucky-speed-controls" style="margin-bottom:0;">
+                        <span class="lucky-speed-label">Velocidad:</span>
+                        <div class="lucky-speed-buttons" id="lucky-speed-buttons">
+                            <button class="lucky-speed-btn" onclick="app.setLuckySpeed(0.75)">0.75×</button>
+                            <button class="lucky-speed-btn active" onclick="app.setLuckySpeed(1)">1×</button>
+                            <button class="lucky-speed-btn" onclick="app.setLuckySpeed(1.25)">1.25×</button>
+                            <button class="lucky-speed-btn" onclick="app.setLuckySpeed(1.5)">1.5×</button>
+                            <button class="lucky-speed-btn" onclick="app.setLuckySpeed(2)">2×</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes area -->
+                <div class="lucky-notes-section">
+                    <h3 style="font-size: 0.95rem; margin-bottom: 8px;">📝 Notas mientras escuchás</h3>
+                    <textarea id="lucky-note-input"
+                        placeholder="Escribí lo que sentís, lo que imaginás, lo que querés manifestar..." rows="4"
+                        class="input-textarea lucky-textarea" style="font-size: 0.9rem; resize: none;"></textarea>
+                    <button class="btn lucky-save-btn" style="margin-top: 8px; width: 100%;"
+                        onclick="app.saveLuckyNote()">💾 Guardar Nota</button>
+                </div>
+
+                <!-- Notes history -->
+                <div id="lucky-notes-history"
+                    style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Lucky notes will be rendered here -->
                 </div>
             </div>
         </div>

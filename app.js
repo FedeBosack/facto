@@ -67,6 +67,9 @@ const app = {
         timerRunning: false,
         timerSeconds: 0,
         musicPlaying: false,
+        luckyAudioPlaying: false,
+        luckyNotes: [],
+        luckyCount: 0,
 
         // History
         history: []
@@ -360,6 +363,9 @@ const app = {
         document.getElementById('concentration-streak').textContent = this.data.consecutiveDays || 0;
         // Totalizador de acciones globales
         document.getElementById('action-streak').textContent = this.data.actions.filter(a => a.completed).length;
+        // Contador de sesiones Lucky
+        const luckyEl = document.getElementById('lucky-streak');
+        if (luckyEl) luckyEl.textContent = this.data.luckyCount || 0;
 
         // Update tagline
         this.updateTagline();
@@ -1026,18 +1032,52 @@ const app = {
     // ============================================
 
     showSettings() {
-        document.getElementById('reminder-toggle').checked = this.data.reminderEnabled;
-        document.getElementById('reminder-time').value = this.data.reminderTime;
-        document.getElementById('settings-level').textContent = `${this.data.currentLevel}`;
-        document.getElementById('progression-type').value = this.data.timerSettings.progressionType;
-        document.getElementById('increment-amount').value = this.data.timerSettings.incrementAmount;
-        document.getElementById('days-for-levelup').value = this.data.timerSettings.daysForLevelUp;
+        const toggle = document.getElementById('reminder-toggle');
+        if (toggle) toggle.checked = this.data.reminderEnabled || false;
+        const timeInput = document.getElementById('reminder-time');
+        if (timeInput) timeInput.value = this.data.reminderTime || '09:00';
+        const lvl = document.getElementById('settings-level');
+        if (lvl) lvl.textContent = `${this.data.currentLevel}`;
+        const progType = document.getElementById('progression-type');
+        if (progType) progType.value = this.data.timerSettings.progressionType;
+        const incrAmt = document.getElementById('increment-amount');
+        if (incrAmt) incrAmt.value = this.data.timerSettings.incrementAmount;
+        const daysLvl = document.getElementById('days-for-levelup');
+        if (daysLvl) daysLvl.value = this.data.timerSettings.daysForLevelUp;
 
         if (this.data.reminderEnabled) {
-            document.getElementById('reminder-time-picker').classList.remove('hidden');
+            const picker = document.getElementById('reminder-time-picker');
+            if (picker) picker.classList.remove('hidden');
         }
 
         this.showScreen('settings-screen');
+
+        // Update notification status — call both sync and async to be safe
+        this._updateNotifStatus();
+        setTimeout(() => this._updateNotifStatus(), 100);
+        setTimeout(() => this._updateNotifStatus(), 400);
+    },
+
+    _updateNotifStatus() {
+        try {
+            const statusEl = document.getElementById('notif-permission-status');
+            if (!statusEl) return;
+            if (!('Notification' in window)) {
+                statusEl.textContent = '⚠️ Tu navegador no soporta notificaciones.';
+                statusEl.style.color = 'var(--text-secondary)';
+            } else if (Notification.permission === 'granted') {
+                statusEl.textContent = '✅ Notificaciones habilitadas.';
+                statusEl.style.color = '#22c55e';
+            } else if (Notification.permission === 'denied') {
+                statusEl.textContent = '🚫 Bloqueadas — habilitarlas en configuración del navegador.';
+                statusEl.style.color = '#ef4444';
+            } else {
+                statusEl.textContent = '🔔 Permiso no solicitado. Tocá el botón para activar.';
+                statusEl.style.color = 'var(--text-secondary)';
+            }
+        } catch (e) {
+            console.log('Notif status error:', e);
+        }
     },
 
     closeSettings() {
@@ -1060,24 +1100,44 @@ const app = {
     },
 
     toggleReminder() {
+        // Check permission first
+        if (!this.data.reminderEnabled && Notification.permission !== 'granted') {
+            this.requestNotificationPermission(true);
+            return;
+        }
         this.data.reminderEnabled = !this.data.reminderEnabled;
-        const picker = document.getElementById('reminder-time-picker');
+        const toggle = document.getElementById('reminder-toggle');
+        if (toggle) toggle.checked = this.data.reminderEnabled;
 
         if (this.data.reminderEnabled) {
-            picker.classList.remove('hidden');
             this.scheduleNotification();
         } else {
-            picker.classList.add('hidden');
+            if (this._notifInterval) {
+                clearInterval(this._notifInterval);
+                this._notifInterval = null;
+            }
         }
-
         this.saveData();
+        this._updateNotifStatus();
     },
 
     saveReminderTime() {
-        this.data.reminderTime = document.getElementById('reminder-time').value;
+        const input = document.getElementById('reminder-time');
+        if (!input || !input.value) return;
+        this.data.reminderTime = input.value;
         this.saveData();
-        this.scheduleNotification();
-        alert('Recordatorio configurado ✅');
+        // Re-schedule with new time if enabled
+        if (this.data.reminderEnabled) {
+            this.scheduleNotification();
+        }
+        // Show brief confirmation inline
+        const btn = document.querySelector('button[onclick="app.saveReminderTime()"]');
+        if (btn) {
+            const orig = btn.textContent;
+            btn.textContent = '✅ Guardado';
+            btn.disabled = true;
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+        }
     },
 
     saveTimerSettings() {
@@ -1100,37 +1160,75 @@ const app = {
     // NOTIFICATIONS
     // ============================================
 
-    requestNotificationPermission() {
-        if ('Notification' in window && Notification.permission === 'default') {
-            setTimeout(() => {
-                Notification.requestPermission();
-            }, 3000);
+    requestNotificationPermission(manual = false) {
+        if (!('Notification' in window)) {
+            if (manual) alert('⚠️ Tu navegador no soporta notificaciones.');
+            return;
         }
+        if (Notification.permission === 'granted') {
+            if (manual) {
+                alert('✅ Las notificaciones ya están habilitadas.');
+                this.showSettings();
+            }
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            if (manual) alert('🚫 Las notificaciones están bloqueadas. Por favor habílalas en la configuración del navegador.');
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                if (manual) alert('✅ ¡Notificaciones habilitadas! Ahora configurá tu hora y activá el recordatorio.');
+                if (this.data.reminderEnabled) this.scheduleNotification();
+            } else {
+                if (manual) alert('🚫 Permiso denegado. Podés cambiarlo desde Configuración del navegador.');
+            }
+            // Refresh status indicator only (don't switch screens)
+            this._updateNotifStatus();
+        });
     },
 
     scheduleNotification() {
         if (!('Notification' in window) || Notification.permission !== 'granted') {
             return;
         }
+        // Clear any existing interval to avoid duplicates
+        if (this._notifInterval) {
+            clearInterval(this._notifInterval);
+            this._notifInterval = null;
+        }
 
         const checkTime = () => {
+            if (!this.data.reminderEnabled) return;
             const now = new Date();
-            const [hours, minutes] = this.data.reminderTime.split(':');
+            const [hours, minutes] = (this.data.reminderTime || '09:00').split(':');
             const reminderTime = new Date();
-            reminderTime.setHours(parseInt(hours), parseInt(minutes), 0);
+            reminderTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
             const today = new Date().toDateString();
-            if (this.data.lastConcentrationDate !== today &&
-                Math.abs(now - reminderTime) < 60000) {
-                new Notification('Facto', {
-                    body: '🎯 Es hora de concentrarte en tus metas',
-                    icon: 'icon-192.png',
-                    badge: 'icon-192.png'
-                });
+            // Fire if within the same minute
+            if (Math.abs(now - reminderTime) < 60000) {
+                // Only once per day
+                const lastNotifDate = this.data.lastNotifDate;
+                if (lastNotifDate !== today) {
+                    this.data.lastNotifDate = today;
+                    this.saveData();
+                    try {
+                        new Notification('Facto 🎯', {
+                            body: 'Es hora de concentrarte en tus metas',
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png'
+                        });
+                    } catch (e) {
+                        console.log('Notification error:', e);
+                    }
+                }
             }
         };
 
-        setInterval(checkTime, 60000);
+        // Check immediately then every minute
+        checkTime();
+        this._notifInterval = setInterval(checkTime, 30000);
     },
 
     // ============================================
@@ -1221,6 +1319,209 @@ const app = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    // ============================================
+    // LUCKY GENERATOR
+    // ============================================
+
+    showLuckyScreen() {
+        this.showScreen('lucky-screen');
+        this.renderLuckyNotes();
+        // Auto-start audio
+        this.startLuckyAudio();
+        // Start seek bar updater
+        this._luckySeekInterval = setInterval(() => this._updateLuckySeekBar(), 500);
+    },
+
+    _formatLuckyTime(secs) {
+        if (!isFinite(secs)) return '0:00';
+        const m = Math.floor(secs / 60);
+        const s = Math.floor(secs % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    },
+
+    _updateLuckySeekBar() {
+        const audio = document.getElementById('lucky-audio');
+        if (!audio || this._luckySeeking) return;
+        const dur = audio.duration || 0;
+        const cur = audio.currentTime || 0;
+        const pct = dur ? (cur / dur) * 100 : 0;
+        const bar = document.getElementById('lucky-seek-bar');
+        if (bar) bar.value = pct;
+        const ct = document.getElementById('lucky-current-time');
+        if (ct) ct.textContent = this._formatLuckyTime(cur);
+        const tt = document.getElementById('lucky-total-time');
+        if (tt) tt.textContent = this._formatLuckyTime(dur);
+    },
+
+    seekLuckyAudio(pct) {
+        const audio = document.getElementById('lucky-audio');
+        if (!audio || !audio.duration) return;
+        audio.currentTime = (pct / 100) * audio.duration;
+        this._updateLuckySeekBar();
+    },
+
+    skipLucky(seconds) {
+        const audio = document.getElementById('lucky-audio');
+        if (!audio) return;
+        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, (audio.currentTime || 0) + seconds));
+        this._updateLuckySeekBar();
+    },
+
+    startLuckyAudio() {
+        const audio = document.getElementById('lucky-audio');
+        if (audio) {
+            audio.currentTime = 0;
+            audio.playbackRate = this._luckySpeed || 1;
+            audio.play().catch(e => console.log('Lucky audio failed:', e));
+            this.data.luckyAudioPlaying = true;
+            const btn = document.getElementById('lucky-play-btn');
+            if (btn) btn.textContent = '⏸️';
+            // Animate wave
+            const wave = document.getElementById('lucky-wave');
+            if (wave) wave.classList.add('playing');
+        }
+        // Reset speed UI to current speed
+        this.setLuckySpeed(this._luckySpeed || 1, true);
+    },
+
+    setLuckySpeed(speed, silent = false) {
+        this._luckySpeed = speed;
+        const audio = document.getElementById('lucky-audio');
+        if (audio) audio.playbackRate = speed;
+        // Update button highlights
+        const btns = document.querySelectorAll('.lucky-speed-btn');
+        btns.forEach(btn => {
+            const btnSpeed = parseFloat(btn.textContent);
+            btn.classList.toggle('active', btnSpeed === speed);
+        });
+    },
+
+    toggleLuckyAudio() {
+        const audio = document.getElementById('lucky-audio');
+        const btn = document.getElementById('lucky-play-btn');
+        const wave = document.getElementById('lucky-wave');
+        if (!audio) return;
+
+        if (this.data.luckyAudioPlaying) {
+            audio.pause();
+            this.data.luckyAudioPlaying = false;
+            if (btn) btn.textContent = '▶️';
+            if (wave) wave.classList.remove('playing');
+        } else {
+            audio.play().catch(e => console.log('Lucky audio failed:', e));
+            this.data.luckyAudioPlaying = true;
+            if (btn) btn.textContent = '⏸️';
+            if (wave) wave.classList.add('playing');
+        }
+    },
+
+    stopLucky() {
+        // Stop seek updater
+        if (this._luckySeekInterval) {
+            clearInterval(this._luckySeekInterval);
+            this._luckySeekInterval = null;
+        }
+        const audio = document.getElementById('lucky-audio');
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        this.data.luckyAudioPlaying = false;
+        // Count this session
+        if (!this.data.luckyCount) this.data.luckyCount = 0;
+        this.data.luckyCount++;
+        this.saveData();
+        const wave = document.getElementById('lucky-wave');
+        if (wave) wave.classList.remove('playing');
+        this.showScreen('home-screen');
+        this.renderHome();
+    },
+
+    saveLuckyNote() {
+        const input = document.getElementById('lucky-note-input');
+        const text = input ? input.value.trim() : '';
+        if (!text) {
+            alert('Escribí algo antes de guardar 📝');
+            return;
+        }
+        if (!this.data.luckyNotes) this.data.luckyNotes = [];
+        this.data.luckyNotes.unshift({
+            id: this.generateId(),
+            text,
+            date: new Date().toISOString()
+        });
+        this.saveData();
+        if (input) input.value = '';
+        this.renderLuckyNotes();
+    },
+
+    renderLuckyNotes() {
+        if (!this.data.luckyNotes) this.data.luckyNotes = [];
+        const container = document.getElementById('lucky-notes-history');
+        if (!container) return;
+
+        if (this.data.luckyNotes.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color: var(--text-secondary); font-size:0.85rem; opacity:0.7;">🌱 Las notas que guardés aparecerán acá</p>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <h4 style="font-size:0.85rem; color: var(--text-secondary); margin-bottom: 4px;">🗂️ Notas guardadas (${this.data.luckyNotes.length})</h4>
+            ${this.data.luckyNotes.map((note, idx) => {
+            const d = new Date(note.date);
+            const dateStr = d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) +
+                ' • ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+            const modifiedBadge = note.modifiedDate
+                ? `<span style="font-size:0.7rem; color: #f59e0b; margin-left:6px;">✏️ editada ${new Date(note.modifiedDate).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>`
+                : '';
+            return `
+                    <div style="background: var(--bg-secondary); border-radius: 10px; padding: 12px 14px; border-left: 3px solid #22c55e;">
+                        <div id="lucky-note-display-${idx}">
+                            <p style="font-size:0.9rem; margin: 0 0 6px 0; line-height:1.4;">${this.escapeHtml(note.text)}</p>
+                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+                                <span style="font-size:0.75rem; color: var(--text-secondary);">🍀 ${dateStr}${modifiedBadge}</span>
+                                <button onclick="app.editLuckyNote(${idx})" style="font-size:0.75rem; background:none; border:1px solid var(--border); border-radius:6px; padding:2px 8px; cursor:pointer; color:var(--text-secondary);">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div id="lucky-note-edit-${idx}" style="display:none;">
+                            <textarea id="lucky-edit-input-${idx}" rows="3" class="input-textarea" style="font-size:0.9rem; resize:none; margin-bottom:6px;">${this.escapeHtml(note.text)}</textarea>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="app.saveLuckyNoteEdit(${idx})" class="btn btn-primary" style="flex:1; padding:6px;">Guardar</button>
+                                <button onclick="app.cancelLuckyNoteEdit(${idx})" class="btn btn-secondary" style="flex:1; padding:6px;">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }).join('')}
+        `;
+    },
+
+    editLuckyNote(idx) {
+        document.getElementById(`lucky-note-display-${idx}`).style.display = 'none';
+        document.getElementById(`lucky-note-edit-${idx}`).style.display = 'block';
+        const ta = document.getElementById(`lucky-edit-input-${idx}`);
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    },
+
+    cancelLuckyNoteEdit(idx) {
+        document.getElementById(`lucky-note-display-${idx}`).style.display = 'block';
+        document.getElementById(`lucky-note-edit-${idx}`).style.display = 'none';
+    },
+
+    saveLuckyNoteEdit(idx) {
+        const ta = document.getElementById(`lucky-edit-input-${idx}`);
+        if (!ta) return;
+        const newText = ta.value.trim();
+        if (!newText) {
+            alert('La nota no puede estar vacía');
+            return;
+        }
+        this.data.luckyNotes[idx].text = newText;
+        this.data.luckyNotes[idx].modifiedDate = new Date().toISOString();
+        this.saveData();
+        this.renderLuckyNotes();
     },
 
 
@@ -2041,15 +2342,7 @@ const app = {
     },
 
     // Settings
-    showSettings() {
-        this.loadSettingsValues();
-        this.showScreen('settings-screen');
-    },
-
-    closeSettings() {
-        this.showScreen('home-screen');
-        this.renderHome();
-    },
+    // (showSettings and closeSettings defined above in SETTINGS section)
 
     loadSettingsValues() {
         const taglineInput = document.getElementById('custom-tagline-input');

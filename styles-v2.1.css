@@ -263,3 +263,389 @@
         height: 360px;
     }
 }
+
+/* ============================================
+   TOGGLE SWITCH (Notifications)
+   ============================================ */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--border);
+    border-radius: 34px;
+    transition: 0.3s;
+}
+
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.toggle-switch input:checked+.slider {
+    background-color: var(--primary-solid, #6366f1);
+}
+
+.toggle-switch input:checked+.slider:before {
+    transform: translateX(22px);
+}
+
+/* ============================================
+   LUCKY GENERATOR — Green Theme
+   ============================================ */
+
+/* Full-screen green gradient background */
+.lucky-screen-bg {
+    background: linear-gradient(160deg, #064e1a 0%, #0f6b28 35%, #166534 65%, #052e16 100%) !important;
+}
+
+.lucky-screen-bg .concentrate-container {
+    position: relative;
+}
+
+/* Back button adapted for green bg */
+.lucky-back-btn {
+    color: rgba(255, 255, 255, 0.85) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(8px);
+    border-radius: 20px !important;
+    padding: 6px 14px !important;
+    font-size: 0.85rem !important;
+}
+
+.lucky-back-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Header */
+.lucky-header {
+    text-align: center;
+    margin: 8px 0 20px;
+}
+
+.lucky-emoji-icon {
+    font-size: 3.5rem;
+    animation: lucky-float 3s ease-in-out infinite;
+    display: block;
+    margin-bottom: 6px;
+}
+
+@keyframes lucky-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.lucky-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 4px;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.lucky-subtitle {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-style: italic;
+    margin: 0;
+}
+
+/* Wave bars — bright on green bg */
+.lucky-wave-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    height: 70px;
+    margin: 8px auto 18px;
+}
+
+.lucky-wave-bar {
+    width: 7px;
+    border-radius: 6px;
+    background: linear-gradient(to top, #4ade80, #bbf7d0);
+    height: 6px;
+    transition: height 0.15s ease;
+    opacity: 0.35;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+}
+
+/* Wave animation when playing */
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(1) {
+    animation: lucky-wave 1.0s ease-in-out infinite;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(2) {
+    animation: lucky-wave 0.8s ease-in-out infinite 0.1s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(3) {
+    animation: lucky-wave 1.2s ease-in-out infinite 0.2s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(4) {
+    animation: lucky-wave 0.65s ease-in-out infinite 0.05s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(5) {
+    animation: lucky-wave 1.1s ease-in-out infinite 0.15s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(6) {
+    animation: lucky-wave 0.9s ease-in-out infinite 0.25s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(7) {
+    animation: lucky-wave 1.3s ease-in-out infinite 0.3s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(8) {
+    animation: lucky-wave 0.75s ease-in-out infinite 0.12s;
+    opacity: 1;
+}
+
+.lucky-wave-container.playing .lucky-wave-bar:nth-child(9) {
+    animation: lucky-wave 1.05s ease-in-out infinite 0.22s;
+    opacity: 1;
+}
+
+@keyframes lucky-wave {
+
+    0%,
+    100% {
+        height: 6px;
+    }
+
+    50% {
+        height: 54px;
+    }
+}
+
+/* Play button — glassy white on green */
+.lucky-play-btn-style {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 2px solid rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 30px rgba(74, 222, 128, 0.15);
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.lucky-play-btn-style:hover {
+    transform: scale(1.08);
+    background: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25), 0 0 40px rgba(74, 222, 128, 0.25);
+}
+
+/* Speed Controls */
+.lucky-speed-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.lucky-speed-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.lucky-speed-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lucky-speed-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.75);
+    border-radius: 20px;
+    padding: 5px 13px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lucky-speed-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.lucky-speed-btn.active {
+    background: #4ade80;
+    border-color: #4ade80;
+    color: #052e16;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+}
+
+/* Notes section — glassmorphism panel */
+.lucky-notes-section {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.lucky-notes-section h3 {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.lucky-textarea {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+.lucky-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.lucky-save-btn {
+    background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+    color: #fff !important;
+    border: none !important;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.lucky-save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(34, 197, 94, 0.5) !important;
+}
+
+/* Audio Player Panel */
+.lucky-player-panel {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Seek bar row */
+.lucky-seek-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lucky-time {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-variant-numeric: tabular-nums;
+    min-width: 34px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Seek range input */
+.lucky-seek-bar {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+    cursor: pointer;
+    background-image: linear-gradient(#4ade80, #4ade80);
+    background-size: 0% 100%;
+    background-repeat: no-repeat;
+}
+
+.lucky-seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #4ade80;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+    transition: transform 0.15s ease;
+}
+
+.lucky-seek-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+}
+
+.lucky-seek-bar::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #4ade80;
+    cursor: pointer;
+    border: none;
+}
+
+/* Skip buttons row */
+.lucky-skip-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.lucky-skip-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.lucky-skip-btn:hover {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.5);
+    color: #fff;
+}

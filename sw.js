@@ -1,6 +1,6 @@
-// Service Worker for Facto PWA - V3.0
+// Service Worker for Facto PWA - V3.1
 // Strategy: Network-First (always try to get the latest version)
-const CACHE_NAME = 'facto-v3.0';
+const CACHE_NAME = 'facto-v3.1';
 const urlsToCache = [
     './',
     './index.html',
@@ -21,7 +21,8 @@ const urlsToCache = [
     './assets/sounds/focus_528hz.wav',
     './assets/sounds/focus_space.wav',
     './assets/sounds/focus_alpha.wav',
-    './assets/sounds/focus_theta.wav'
+    './assets/sounds/focus_theta.wav',
+    './assets/sounds/7 Power Manifesting The Luck Generator.mp3'
 ];
 
 // Install event - cache files and skip waiting immediately
