@@ -3,6 +3,12 @@
 // Focus & Action To Your Goals
 // ============================================
 
+// ─── Web Push Configuration ─────────────────────────────────────────────────
+// URL of the Facto push server (update after deploying to Render/Railway)
+const PUSH_SERVER_URL = 'https://facto-oe26.onrender.com';
+// VAPID public key — must match the key in the push server's .env
+const VAPID_PUBLIC_KEY = 'BGufWaRcFo_Ck8C5M958xUP_-_qnUkfryb7fqtme3rXtploNU4q_6LA-1zjxJ3JXQ4znfoLbFyu1Ex8z-fWxa28';
+
 // Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDSQ1YkwbkWqK3CQxf_BbmIAdr5kg_cgiU",
@@ -74,6 +80,9 @@ const app = {
         // History
         history: []
     },
+
+    // Holds the current Web Push PushSubscription object (not persisted to localStorage)
+    _pushSubscription: null,
 
     // ============================================
     // INITIALIZATION
@@ -1110,11 +1119,30 @@ const app = {
         if (toggle) toggle.checked = this.data.reminderEnabled;
 
         if (this.data.reminderEnabled) {
+            // Start local fallback interval
             this.scheduleNotification();
+            // Sync enable with push server
+            if (this._pushSubscription) {
+                fetch(`${PUSH_SERVER_URL}/toggle-reminder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription: this._pushSubscription, enabled: true })
+                }).catch(e => console.log('[WebPush] toggle-on error:', e.message));
+            } else {
+                this._subscribeToPush();
+            }
         } else {
             if (this._notifInterval) {
                 clearInterval(this._notifInterval);
                 this._notifInterval = null;
+            }
+            // Sync disable with push server (keep subscription, just disable sending)
+            if (this._pushSubscription) {
+                fetch(`${PUSH_SERVER_URL}/toggle-reminder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription: this._pushSubscription, enabled: false })
+                }).catch(e => console.log('[WebPush] toggle-off error:', e.message));
             }
         }
         this.saveData();
@@ -1126,9 +1154,20 @@ const app = {
         if (!input || !input.value) return;
         this.data.reminderTime = input.value;
         this.saveData();
-        // Re-schedule with new time if enabled
+        // Re-schedule local fallback with new time if enabled
         if (this.data.reminderEnabled) {
             this.scheduleNotification();
+        }
+        // Sync new time with push server
+        if (this._pushSubscription) {
+            fetch(`${PUSH_SERVER_URL}/update-time`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subscription: this._pushSubscription,
+                    reminderTime: this.data.reminderTime
+                })
+            }).catch(e => console.log('[WebPush] update-time error:', e.message));
         }
         // Show brief confirmation inline
         const btn = document.querySelector('button[onclick="app.saveReminderTime()"]');
@@ -1170,6 +1209,8 @@ const app = {
                 alert('✅ Las notificaciones ya están habilitadas.');
                 this.showSettings();
             }
+            // Try to subscribe to push in case it wasn't registered yet
+            this._subscribeToPush();
             return;
         }
         if (Notification.permission === 'denied') {
@@ -1179,11 +1220,12 @@ const app = {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
                 if (manual) alert('✅ ¡Notificaciones habilitadas! Ahora configurá tu hora y activá el recordatorio.');
+                // Subscribe to Web Push
+                this._subscribeToPush();
                 if (this.data.reminderEnabled) this.scheduleNotification();
             } else {
                 if (manual) alert('🚫 Permiso denegado. Podés cambiarlo desde Configuración del navegador.');
             }
-            // Refresh status indicator only (don't switch screens)
             this._updateNotifStatus();
         });
     },
@@ -1198,25 +1240,101 @@ const app = {
             return;
         }
 
-        const title = 'Facto 🎯';
-        const options = {
-            body: '¡Hola! El recordatorio diario está funcionando correctamente ✅',
-            icon: 'icon-192.png',
-            badge: 'icon-192.png'
-        };
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(title, options).catch(e => {
-                    alert('Error al enviar (SW): ' + e.message);
+        // If we have a push subscription, ask the server to send a real push
+        // (this tests the full pipeline including background delivery)
+        if (this._pushSubscription) {
+            fetch(`${PUSH_SERVER_URL}/send-test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subscription: this._pushSubscription })
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.success) alert('Error al enviar push de prueba: ' + (d.error || 'desconocido'));
+                })
+                .catch(() => {
+                    // Fallback: local notification if server unreachable
+                    this._showLocalNotification('Facto 🎯', '¡El recordatorio diario está funcionando ✅');
                 });
+        } else {
+            // No push subscription yet, show a local notification as fallback
+            this._showLocalNotification('Facto 🎯', '¡Hola! El recordatorio diario está funcionando correctamente ✅');
+        }
+    },
+
+    _showLocalNotification(title, body) {
+        const options = { body, icon: 'icon-192.png', badge: 'icon-192.png' };
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, options).catch(e => alert('Error al enviar: ' + e.message));
             });
         } else {
-            try {
-                new Notification(title, options);
-            } catch (e) {
-                alert('Error al enviar la notificación: ' + e.message);
+            try { new Notification(title, options); } catch (e) { alert('Error: ' + e.message); }
+        }
+    },
+
+    // ─── Web Push subscription helpers ────────────────────────────────────────
+
+    _urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    },
+
+    async _subscribeToPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('Push not supported in this browser');
+            return;
+        }
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            // Check if already subscribed
+            let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                // Create new subscription
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: this._urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
             }
+            this._pushSubscription = subscription;
+
+            // Register on the server with current reminder settings
+            await fetch(`${PUSH_SERVER_URL}/subscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subscription,
+                    reminderTime: this.data.reminderTime || '09:00',
+                    reminderEnabled: this.data.reminderEnabled || false,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                })
+            });
+            console.log('[WebPush] Subscribed successfully');
+        } catch (e) {
+            console.log('[WebPush] Subscribe error:', e.message);
+        }
+    },
+
+    async _unsubscribeFromPush() {
+        try {
+            if (this._pushSubscription) {
+                await fetch(`${PUSH_SERVER_URL}/unsubscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription: this._pushSubscription })
+                });
+            }
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                const sub = await registration.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+            }
+            this._pushSubscription = null;
+            console.log('[WebPush] Unsubscribed');
+        } catch (e) {
+            console.log('[WebPush] Unsubscribe error:', e.message);
         }
     },
 

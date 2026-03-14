@@ -68,10 +68,41 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// Notification click handler
+// ─── Push Event: receive push from server and show notification ──────────────
+self.addEventListener('push', event => {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch (e) {
+        data = { title: 'Facto 🎯', body: event.data ? event.data.text() : '¡Es hora de concentrarte!' };
+    }
+
+    const title = data.title || 'Facto 🎯';
+    const options = {
+        body: data.body || '¡Es hora de concentrarte en tus metas! 🔥',
+        icon: data.icon || 'icon-192.png',
+        badge: data.badge || 'icon-192.png',
+        data: { url: data.url || './' }
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+// ─── Notification click handler ───────────────────────────────────────────────
 self.addEventListener('notificationclick', event => {
     event.notification.close();
+    const url = event.notification.data?.url || './';
     event.waitUntil(
-        clients.openWindow('./')
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            // If a window for the app is already open, focus it
+            for (const client of clientList) {
+                if (client.url.includes('index.html') || client.url.endsWith('/')) {
+                    return client.focus();
+                }
+            }
+            return clients.openWindow(url);
+        })
     );
 });
