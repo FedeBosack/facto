@@ -105,6 +105,8 @@ app.post('/update-time', (req, res) => {
     }
 
     store[key].reminderTime = reminderTime;
+    // Permitir que vuelva a sonar hoy si cambiaron la hora
+    delete store[key].lastSentDate;
     saveStore(store);
     res.json({ success: true });
 });

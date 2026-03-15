@@ -1153,6 +1153,8 @@ const app = {
         const input = document.getElementById('reminder-time');
         if (!input || !input.value) return;
         this.data.reminderTime = input.value;
+        // Permitir que vuelva a sonar hoy si cambiaron la hora
+        this.data.lastNotifDate = null;
         this.saveData();
         // Re-schedule local fallback with new time if enabled
         if (this.data.reminderEnabled) {
