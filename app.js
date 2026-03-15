@@ -542,7 +542,7 @@ const app = {
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
                         <div style="display: flex; gap: 4px; flex-shrink: 0;">
                             <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
-                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar acción" style="font-size: 0.8rem;">✏️</button>
+                            <button class="btn-icon-small" onclick="app.editAction('${action.id}')" title="Editar acción" style="font-size: 0.8rem;">✏️</button>
                         </div>
                     </div>
                 `;
@@ -871,26 +871,10 @@ const app = {
         this.renderGoalCheckboxesForAction();
         this.showScreen('create-action-screen');
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // Enfocar el input del texto nombre
-        setTimeout(() => {
-            const textInput = document.getElementById('action-text-input');
-            if (textInput) textInput.focus();
-        }, 100);
+        window.scrollTo(0, 0);
     },
 
-    editExistingAction(actionId) {
-        const action = this.data.actions.find(a => a.id === actionId);
-        if (!action) return;
 
-        this.showCreateActionScreen();
-        // Since showCreateActionScreen resets fields, we set them synchronously immediately after
-        document.getElementById('action-id-input').value = action.id;
-        document.getElementById('action-text-input').value = action.text;
-        document.getElementById('action-notes-input').value = action.notes || '';
-        this.renderGoalCheckboxesForAction(action.goalIds || []);
-    },
 
     prepareActionForConcentratedGoals() {
         document.getElementById('action-id-input').value = '';
@@ -1883,7 +1867,7 @@ const app = {
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
                         <div style="display: flex; gap: 4px; flex-shrink: 0;">
                             <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
-                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
+                            <button class="btn-icon-small" onclick="app.editAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
                         </div>
                     </div>
                 `;
@@ -1936,7 +1920,7 @@ const app = {
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
                         <div style="display: flex; gap: 4px; flex-shrink: 0;">
                             <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
-                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
+                            <button class="btn-icon-small" onclick="app.editAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
                         </div>
                     </div>
                 `;
@@ -2446,7 +2430,7 @@ const app = {
             });
         }
         this.showScreen('create-action-screen');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
     },
 
     saveAction() {
