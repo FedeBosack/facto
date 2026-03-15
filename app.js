@@ -69,13 +69,17 @@ const app = {
         theme: 'light',
         focusSound: 'assets/sounds/focus_brown.wav',
         reminderEnabled: false,
-        reminderTime: '09:00',
+        reminders: [
+            { id: 'default-1', time: '09:00', message: '¡Es hora de concentrarte en tus metas! 🔥', enabled: true },
+            { id: 'default-2', time: '20:00', message: 'Manifestá tu suerte con Lucky Generator 🍀', enabled: true }
+        ],
         timerRunning: false,
         timerSeconds: 0,
         musicPlaying: false,
         luckyAudioPlaying: false,
         luckyNotes: [],
         luckyCount: 0,
+        collapsedGoals: [],
 
         // History
         history: []
@@ -184,6 +188,7 @@ const app = {
     showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
+        window.scrollTo(0, 0); // Siempre ir arriba al cambiar de pantalla
     },
 
     // ============================================
@@ -320,10 +325,16 @@ const app = {
             theme: oldData.theme || 'light',
             focusSound: oldData.focusSound || 'assets/sounds/focus_brown.wav',
             reminderEnabled: oldData.reminderEnabled || false,
-            reminderTime: oldData.reminderTime || '09:00',
+            reminders: oldData.reminders || [
+                { id: 'default-1', time: oldData.reminderTime || '09:00', message: '¡Es hora de concentrarte en tus metas! 🔥', enabled: true }
+            ],
             timerRunning: false,
             timerSeconds: 0,
             musicPlaying: false,
+            luckyAudioPlaying: false,
+            luckyNotes: [],
+            luckyCount: 0,
+            collapsedGoals: [],
             history: oldData.history || []
         };
 
@@ -528,7 +539,11 @@ const app = {
                                 Modificado: ${action.modifiedDate ? new Date(action.modifiedDate).toLocaleDateString() : 'Hoy'}
                             </div>
                         </div>
-                        <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Editar notas">💬</button>
+                        <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
+                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                            <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
+                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar acción" style="font-size: 0.8rem;">✏️</button>
+                        </div>
                     </div>
                 `;
             }).join('') + `
@@ -865,6 +880,18 @@ const app = {
         }, 100);
     },
 
+    editExistingAction(actionId) {
+        const action = this.data.actions.find(a => a.id === actionId);
+        if (!action) return;
+
+        this.showCreateActionScreen();
+        // Since showCreateActionScreen resets fields, we set them synchronously immediately after
+        document.getElementById('action-id-input').value = action.id;
+        document.getElementById('action-text-input').value = action.text;
+        document.getElementById('action-notes-input').value = action.notes || '';
+        this.renderGoalCheckboxesForAction(action.goalIds || []);
+    },
+
     prepareActionForConcentratedGoals() {
         document.getElementById('action-id-input').value = '';
         document.getElementById('action-text-input').value = '';
@@ -1149,30 +1176,48 @@ const app = {
         this._updateNotifStatus();
     },
 
-    saveReminderTime() {
-        const input = document.getElementById('reminder-time');
-        if (!input || !input.value) return;
-        this.data.reminderTime = input.value;
-        // Permitir que vuelva a sonar hoy si cambiaron la hora
-        this.data.lastNotifDate = null;
+    saveReminders() {
+        const container = document.getElementById('reminders-container');
+        if (!container) return;
+        
+        const newReminders = [];
+        const inputs = container.querySelectorAll('div > input[type="hidden"]');
+        
+        inputs.forEach((hiddenInput) => {
+            const idx = hiddenInput.id.replace('rem-id-', '');
+            const timeVal = document.getElementById('rem-time-' + idx).value;
+            const msgVal = document.getElementById('rem-msg-' + idx).value;
+            const enVal = document.getElementById('rem-en-' + idx).checked;
+            
+            newReminders.push({
+                id: hiddenInput.value,
+                time: timeVal || '09:00',
+                message: msgVal || '¡Es hora de concentrarte en tus metas! 🔥',
+                enabled: enVal
+            });
+        });
+        
+        this.data.reminders = newReminders;
+        this.data.lastNotifDate = null; // reset logic
         this.saveData();
-        // Re-schedule local fallback with new time if enabled
+        this.renderRemindersSettings();
+        
         if (this.data.reminderEnabled) {
             this.scheduleNotification();
         }
-        // Sync new time with push server
+        
         if (this._pushSubscription) {
-            fetch(`${PUSH_SERVER_URL}/update-time`, {
+            fetch(`${PUSH_SERVER_URL}/update-reminders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     subscription: this._pushSubscription,
-                    reminderTime: this.data.reminderTime
+                    reminders: this.data.reminders
                 })
-            }).catch(e => console.log('[WebPush] update-time error:', e.message));
+            }).catch(e => console.log('[WebPush] update-reminders error:', e.message));
         }
-        // Show brief confirmation inline
-        const btn = document.querySelector('button[onclick="app.saveReminderTime()"]');
+        // Show brief confirmation inline for the save button
+        const btn = document.querySelector('button[onclick="app.saveReminders()"]');
         if (btn) {
             const orig = btn.textContent;
             btn.textContent = '✅ Guardado';
@@ -1308,7 +1353,7 @@ const app = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     subscription,
-                    reminderTime: this.data.reminderTime || '09:00',
+                    reminders: this.data.reminders,
                     reminderEnabled: this.data.reminderEnabled || false,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                 })
@@ -1353,39 +1398,45 @@ const app = {
         const checkTime = () => {
             if (!this.data.reminderEnabled) return;
             const now = new Date();
-            const [hours, minutes] = (this.data.reminderTime || '09:00').split(':');
-            const reminderTime = new Date();
-            reminderTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
             const today = new Date().toDateString();
-            // Fire if within the same minute
-            if (Math.abs(now - reminderTime) < 60000) {
-                // Only once per day
-                const lastNotifDate = this.data.lastNotifDate;
-                if (lastNotifDate !== today) {
-                    this.data.lastNotifDate = today;
-                    this.saveData();
 
-                    const title = 'Facto 🎯';
-                    const options = {
-                        body: 'Es hora de concentrarte en tus metas',
-                        icon: 'icon-192.png',
-                        badge: 'icon-192.png'
-                    };
+            if (!this.data.lastNotifDates) this.data.lastNotifDates = {};
 
-                    if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.ready.then(registration => {
-                            registration.showNotification(title, options).catch(e => console.log('SW Notification error:', e));
-                        });
-                    } else {
-                        try {
-                            new Notification(title, options);
-                        } catch (e) {
-                            console.log('Notification error:', e);
+            this.data.reminders.forEach(reminder => {
+                if (!reminder.enabled) return;
+
+                const [hours, minutes] = (reminder.time || '09:00').split(':');
+                const reminderTimeObj = new Date();
+                reminderTimeObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                // Fire if within the same minute
+                if (Math.abs(now - reminderTimeObj) < 60000) {
+                    // Only once per day per reminder
+                    if (this.data.lastNotifDates[reminder.id] !== today) {
+                        this.data.lastNotifDates[reminder.id] = today;
+                        this.saveData();
+
+                        const title = 'Facto 🎯';
+                        const options = {
+                            body: reminder.message || 'Es hora de concentrarte en tus metas',
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png'
+                        };
+
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.ready.then(registration => {
+                                registration.showNotification(title, options).catch(e => console.log('SW Notification error:', e));
+                            });
+                        } else {
+                            try {
+                                new Notification(title, options);
+                            } catch (e) {
+                                console.log('Notification error:', e);
+                            }
                         }
                     }
                 }
-            }
+            });
         };
 
         // Check immediately then every minute
@@ -1727,12 +1778,17 @@ const app = {
                 const completedCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id) && a.completed).length;
                 const totalCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id)).length;
                 return `
-                            <div class="goal-title-item" onclick="app.showActionsForGoal('${goal.id}')">
-                                <span class="goal-title-icon">${category.icon}</span>
-                                <span class="goal-title-text" style="flex:1;">${this.escapeHtml(goal.title)}</span>
-                                <span style="font-size: 0.75rem; color: var(--text-secondary); background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px;">
-                                    ${completedCount}/${totalCount} ✅
-                                </span>
+                            <div class="goal-title-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--card-bg); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border-color, rgba(0,0,0,0.06)); cursor: pointer;" onclick="app.showActionsForGoal('${goal.id}')">
+                                <div style="display: flex; align-items: center; flex: 1;">
+                                    <span style="font-size: 1.2rem; margin-right: 10px;">${category.icon}</span>
+                                    <span style="font-weight: 500; font-size: 0.95rem;">${this.escapeHtml(goal.title)}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary); background: var(--bg-secondary); padding: 3px 8px; border-radius: 6px;">
+                                        ${completedCount}/${totalCount} ✅
+                                    </span>
+                                    <button class="btn-icon-small" onclick="event.stopPropagation(); app.editGoal('${goal.id}')" title="Editar Meta" style="font-size: 0.85rem; padding: 4px; background: transparent;">✏️</button>
+                                </div>
                             </div>
                         `;
             }).join('')}
@@ -1742,7 +1798,6 @@ const app = {
         }
     },
 
-    // Actions To - Actions grouped by Focus (goal) - shows all on home
     renderActionsTo() {
         const container = document.getElementById('actions-to-list');
         if (!container) return;
@@ -1791,14 +1846,18 @@ const app = {
 
             if (incompleteActions.length === 0) return; // No mostrar el grupo si todas ya se completaron
 
+            const isCollapsed = this.data.collapsedGoals && this.data.collapsedGoals.includes(goal.id);
+            const chevronIcon = isCollapsed ? '🔽' : '🔼';
+
             html += `
                 <div class="action-goal-group" style="background: var(--card-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border-left: 4px solid ${category.color};">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; user-select: none;" onclick="app.toggleGoalActions('${goal.id}')">
                         <span style="font-size: 1.2rem;">${category.icon}</span>
                         <span style="font-weight: 600; font-size: 0.95rem; flex: 1;">${this.escapeHtml(goal.title)}</span>
                         <span style="font-size: 0.75rem; color: var(--text-secondary);">${completedCount}/${goalActions.length} ✅</span>
+                        <span style="font-size: 0.9rem; margin-left: 4px; color: var(--text-secondary);">${chevronIcon}</span>
                     </div>
-                    <div class="action-items-list">
+                    <div class="action-items-list" style="${isCollapsed ? 'display: none;' : ''}">
             `;
 
             incompleteActions.forEach(action => {
@@ -1807,8 +1866,9 @@ const app = {
                 let prosConsIndicator = '';
                 if (action.prosPct !== undefined && action.prosPct !== null) {
                     const pct = action.prosPct;
-                    const barColor = pct >= 60 ? '#22c55e' : pct <= 40 ? '#ef4444' : '#f59e0b';
-                    prosConsIndicator = `<span style="font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; background: ${barColor}22; color: ${barColor}; font-weight: 600;">${pct}%👍</span>`;
+                    const barColor = pct >= 80 ? '#22c55e' : pct <= 25 ? '#ef4444' : '#f59e0b';
+                    const pctIcon = pct >= 80 ? '👍✅' : pct <= 25 ? '👎❌' : '⚖️';
+                    prosConsIndicator = `<span style="font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; background: ${barColor}22; color: ${barColor}; font-weight: 600;">${pctIcon} ${pct}%</span>`;
                 }
                 html += `
                     <div id="action-item-${action.id}" class="action-item-compact" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.06));">
@@ -1821,7 +1881,10 @@ const app = {
                             ${action.notes ? `<span style="color: var(--text-secondary); font-size: 0.75rem;"> 💭 ${this.escapeHtml(action.notes)}</span>` : ''}
                         </div>
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
-                        <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
+                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                            <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
+                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
+                        </div>
                     </div>
                 `;
             });
@@ -1831,6 +1894,22 @@ const app = {
                 </div>
             `;
         });
+
+        // Agrego logic para toggleGroup
+        if (!this.toggleGoalActionsDef) {
+            this.toggleGoalActions = function(goalId) {
+                if (!this.data.collapsedGoals) this.data.collapsedGoals = [];
+                const index = this.data.collapsedGoals.indexOf(goalId);
+                if (index > -1) {
+                    this.data.collapsedGoals.splice(index, 1);
+                } else {
+                    this.data.collapsedGoals.push(goalId);
+                }
+                this.saveData();
+                this.renderActionsTo();
+            };
+            this.toggleGoalActionsDef = true;
+        }
 
         if (unlinkedActions.length > 0) {
             html += `
@@ -1855,7 +1934,10 @@ const app = {
                             ${this.escapeHtml(action.text)}
                         </div>
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
-                        <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
+                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                            <button class="btn-icon-small" onclick="app.editActionNotes('${action.id}')" title="Notas" style="font-size: 0.8rem;">💬</button>
+                            <button class="btn-icon-small" onclick="app.editExistingAction('${action.id}')" title="Editar" style="font-size: 0.8rem;">✏️</button>
+                        </div>
                     </div>
                 `;
             });
@@ -1923,8 +2005,8 @@ const app = {
                     prosConsHtml = `
                         <div style="margin-top: 6px;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 600;">
-                                <span style="color: #22c55e;">👍 ${pct}%</span>
-                                <span style="color: #ef4444;">👎 ${100 - pct}%</span>
+                                <span style="color: #22c55e;">👍✅ ${pct}%</span>
+                                <span style="color: #ef4444;">👎❌ ${100 - pct}%</span>
                             </div>
                             <div style="height: 6px; border-radius: 3px; overflow: hidden; display: flex; margin-top: 2px;">
                                 <div style="width: ${pct}%; background: #22c55e;"></div>
@@ -2258,8 +2340,8 @@ const app = {
         let prosConsHtml = '';
         if (action.prosPct !== undefined && action.prosPct !== null) {
             const pct = action.prosPct;
-            const barColor = pct >= 60 ? '#22c55e' : pct <= 40 ? '#ef4444' : '#f59e0b';
-            const verdict = pct >= 70 ? '✅ Muy favorable' : pct >= 55 ? '👍 Favorable' : pct >= 45 ? '⚖️ Equilibrado' : pct >= 30 ? '👎 Desfavorable' : '❌ Muy desfavorable';
+            const barColor = pct >= 80 ? '#22c55e' : pct <= 25 ? '#ef4444' : '#f59e0b';
+            const verdict = pct >= 80 ? '👍✅ Muy favorable' : pct >= 55 ? '⚖️ Favorable' : pct >= 45 ? '⚖️ Equilibrado' : pct >= 26 ? '⚖️ Desfavorable' : '👎❌ Muy desfavorable';
             prosConsHtml = `
                 <div style="margin-top: 8px; padding: 8px; background: var(--bg-secondary); border-radius: 8px;">
                     <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">⚖️ ${verdict}</div>
@@ -2268,8 +2350,8 @@ const app = {
                         <div style="width: ${100 - pct}%; background: #ef4444;"></div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-top: 2px;">
-                        <span style="color: #22c55e;">👍 ${pct}%</span>
-                        <span style="color: #ef4444;">👎 ${100 - pct}%</span>
+                        <span style="color: #22c55e;">👍✅ ${pct}%</span>
+                        <span style="color: #ef4444;">👎❌ ${100 - pct}%</span>
                     </div>
                     ${action.pros ? `<div style="font-size: 0.75rem; color: #22c55e; margin-top: 4px;">✅ ${this.escapeHtml(action.pros)}</div>` : ''}
                     ${action.cons ? `<div style="font-size: 0.75rem; color: #ef4444;">❌ ${this.escapeHtml(action.cons)}</div>` : ''}
@@ -2519,10 +2601,62 @@ const app = {
         if (reminderTime) {
             reminderTime.value = this.data.reminderTime || '09:00';
         }
+        
+        this.renderRemindersSettings();
+
         const soundSelect = document.getElementById('focus-sound-select');
         if (soundSelect) {
             soundSelect.value = this.data.focusSound || 'assets/sounds/focus_brown.wav';
         }
+    },
+
+    renderRemindersSettings() {
+        const container = document.getElementById('reminders-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        if (!this.data.reminders || this.data.reminders.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.8rem;text-align:center;">No configuraste ningún recordatorio.</p>';
+            return;
+        }
+
+        this.data.reminders.forEach((rem, idx) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; flex-direction:column; gap:6px; background:var(--bg-secondary); padding:10px; border-radius:8px; border:1px solid var(--border);';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <input type="time" id="rem-time-${idx}" value="${rem.time}" onchange="app.saveReminders()" style="flex:1; padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text);">
+                    <div style="display:flex; align-items:center; gap:8px; margin-left:10px;">
+                        <label class="toggle-switch" style="transform: scale(0.8);">
+                            <input type="checkbox" id="rem-en-${idx}" ${rem.enabled ? 'checked' : ''} onchange="app.saveReminders()">
+                            <span class="slider"></span>
+                        </label>
+                        <button onclick="app.removeReminder('${rem.id}')" title="Borrar" style="background:none;border:none;font-size:1rem;color:#ef4444;cursor:pointer;">🗑️</button>
+                    </div>
+                </div>
+                <input type="text" id="rem-msg-${idx}" value="${this.escapeHtml(rem.message)}" onblur="app.saveReminders()" placeholder="Escribe un mensaje de notificación (Ej: Focus to metas)" style="width:100%; padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.85rem;">
+                <input type="hidden" id="rem-id-${idx}" value="${rem.id}">
+            `;
+            container.appendChild(div);
+        });
+    },
+
+    addReminder() {
+        if (!this.data.reminders) this.data.reminders = [];
+        this.data.reminders.push({
+            id: this.generateId(),
+            time: '09:00',
+            message: 'Focus to metas',
+            enabled: true
+        });
+        this.saveReminders();
+    },
+
+    removeReminder(id) {
+        if (!confirm('¿Borrar este recordatorio?')) return;
+        this.data.reminders = this.data.reminders.filter(r => r.id !== id);
+        this.saveReminders();
     },
 
     saveFocusSound() {

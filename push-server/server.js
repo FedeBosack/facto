@@ -71,19 +71,32 @@ app.get('/vapid-public-key', (req, res) => {
 
 // Register a new push subscription
 app.post('/subscribe', (req, res) => {
-    const { subscription, reminderTime, reminderEnabled, timezone } = req.body;
+    const { subscription, reminderTime, reminderEnabled, timezone, reminders } = req.body;
     if (!subscription || !subscription.endpoint) {
         return res.status(400).json({ error: 'Missing subscription' });
     }
 
     const store = loadStore();
     const key = hashEndpoint(subscription.endpoint);
+    
+    // Default fallback backward-compatibility
+    let userReminders = reminders;
+    if (!userReminders) {
+        userReminders = [{
+            id: 'default-1',
+            time: reminderTime || '09:00',
+            message: '¡Es hora de concentrarte en tus metas! 🔥',
+            enabled: true
+        }];
+    }
+
     store[key] = {
         subscription,
-        reminderTime: reminderTime || '09:00',
+        reminders: userReminders,
         reminderEnabled: reminderEnabled !== false,
         timezone: timezone || 'America/Argentina/Buenos_Aires',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        lastSentDates: store[key]?.lastSentDates || {}
     };
     saveStore(store);
 
@@ -91,11 +104,11 @@ app.post('/subscribe', (req, res) => {
     res.json({ success: true, key });
 });
 
-// Update reminder time for an existing subscription
-app.post('/update-time', (req, res) => {
-    const { subscription, reminderTime } = req.body;
-    if (!subscription || !reminderTime) {
-        return res.status(400).json({ error: 'Missing params' });
+// Update reminders for an existing subscription
+app.post('/update-reminders', (req, res) => {
+    const { subscription, reminders } = req.body;
+    if (!subscription || !reminders || !Array.isArray(reminders)) {
+        return res.status(400).json({ error: 'Missing params or invalid reminders array' });
     }
 
     const store = loadStore();
@@ -104,9 +117,9 @@ app.post('/update-time', (req, res) => {
         return res.status(404).json({ error: 'Subscription not found' });
     }
 
-    store[key].reminderTime = reminderTime;
-    // Permitir que vuelva a sonar hoy si cambiaron la hora
-    delete store[key].lastSentDate;
+    store[key].reminders = reminders;
+    // Clearing lastSentDates to allow immediate triggering today if time changed
+    store[key].lastSentDates = {}; 
     saveStore(store);
     res.json({ success: true });
 });
@@ -181,36 +194,50 @@ cron.schedule('* * * * *', async () => {
     for (const key of keys) {
         const entry = store[key];
         if (!entry.reminderEnabled) continue;
-
-        // Parse the user's reminder time in their timezone
-        const [hours, minutes] = (entry.reminderTime || '09:00').split(':').map(Number);
+        
+        // Ensure properties exist for backwards compatibility with old store
+        if (!entry.reminders || !Array.isArray(entry.reminders)) {
+            entry.reminders = [{
+                id: 'default-1',
+                time: entry.reminderTime || '09:00',
+                message: '¡Es hora de concentrarte en tus metas! 🔥',
+                enabled: true
+            }];
+        }
+        if (!entry.lastSentDates) entry.lastSentDates = {};
 
         // Get current time in the user's timezone
         const nowInTZ = new Date(now.toLocaleString('en-US', { timeZone: entry.timezone || 'America/Argentina/Buenos_Aires' }));
         const currentHour = nowInTZ.getHours();
         const currentMin = nowInTZ.getMinutes();
+        const todayKey = now.toISOString().slice(0, 10);
 
-        if (currentHour === hours && currentMin === minutes) {
-            // Check we haven't already sent today
-            const todayKey = now.toISOString().slice(0, 10);
-            if (entry.lastSentDate === todayKey) continue;
+        for (const reminder of entry.reminders) {
+            if (!reminder.enabled) continue;
 
-            const payload = JSON.stringify({
-                title: 'Facto 🎯',
-                body: '¡Es hora de concentrarte en tus metas! 🔥',
-                icon: 'icon-192.png',
-                badge: 'icon-192.png'
-            });
+            const [hours, minutes] = (reminder.time || '09:00').split(':').map(Number);
 
-            try {
-                await webpush.sendNotification(entry.subscription, payload);
-                store[key].lastSentDate = todayKey;
-                console.log(`[cron] Sent to key ${key} at ${entry.reminderTime}`);
-            } catch (e) {
-                console.error(`[cron] Failed for key ${key}:`, e.statusCode, e.message);
-                // If subscription expired/invalid, mark for removal
-                if (e.statusCode === 410 || e.statusCode === 404) {
-                    failedKeys.push(key);
+            if (currentHour === hours && currentMin === minutes) {
+                // Check we haven't already sent this specific reminder today
+                if (entry.lastSentDates[reminder.id] === todayKey) continue;
+
+                const payload = JSON.stringify({
+                    title: 'Facto 🎯',
+                    body: reminder.message || '¡Es hora de concentrarte en tus metas! 🔥',
+                    icon: 'icon-192.png',
+                    badge: 'icon-192.png'
+                });
+
+                try {
+                    await webpush.sendNotification(entry.subscription, payload);
+                    entry.lastSentDates[reminder.id] = todayKey;
+                    console.log(`[cron] Sent reminder ${reminder.id} to key ${key} at ${reminder.time}`);
+                } catch (e) {
+                    console.error(`[cron] Failed for key ${key}:`, e.statusCode, e.message);
+                    // If subscription expired/invalid, mark for removal
+                    if (e.statusCode === 410 || e.statusCode === 404) {
+                        if (!failedKeys.includes(key)) failedKeys.push(key);
+                    }
                 }
             }
         }

@@ -424,29 +424,31 @@
                     <h3>🔔 Recordatorio Diario</h3>
                     <p class="small-text" id="notif-permission-status">Cargando estado...</p>
 
-                    <!-- Time picker — always visible -->
+                    <!-- Reminders container -->
                     <div style="margin: 14px 0;">
-                        <label
-                            style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px; color:var(--text-secondary);">
-                            🕐 Hora del recordatorio
-                        </label>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="time" id="reminder-time" value="09:00"
-                                style="flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; background:var(--bg-secondary); color:var(--text); font-size:1rem; font-weight:600;">
-                            <button class="btn btn-primary" onclick="app.saveReminderTime()"
-                                style="white-space:nowrap; padding:10px 16px;">
-                                💾 Guardar
-                            </button>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <label style="font-size:0.9rem; font-weight:700; color:var(--text);">
+                                ⏰ Mis Recordatorios
+                            </label>
                         </div>
+                        <div id="reminders-container" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 12px;">
+                            <!-- Custom reminders injected by app.js -->
+                        </div>
+                        <button class="btn btn-secondary" onclick="app.addReminder()" style="width:100%; font-size: 0.85rem; border: 1px dashed var(--border); background: transparent; color: var(--text);">
+                            + Agregar Tarea / Recordatorio
+                        </button>
                     </div>
 
-                    <!-- Toggle -->
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                    <!-- Toggle Master -->
+                    <div style="display:flex; align-items:center; justify-content: space-between; gap:12px; margin-bottom:16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                        <div>
+                            <span style="font-size:0.9rem; display:block; font-weight:600;">Notificaciones Push</span>
+                            <span style="font-size:0.75rem; color: var(--text-secondary);">Activa o desactiva todos</span>
+                        </div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="reminder-toggle" onchange="app.toggleReminder()">
                             <span class="slider"></span>
                         </label>
-                        <span style="font-size:0.9rem;">Activar recordatorio diario</span>
                     </div>
 
                     <!-- Request permission button -->
