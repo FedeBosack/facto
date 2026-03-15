@@ -252,6 +252,18 @@ const app = {
                 this.data = { ...this.data, ...parsedData };
             }
 
+            // Data repair: wipe out false 50% prosPct if pros & cons are empty
+            if (this.data.actions && this.data.actions.length > 0) {
+                let repaired = false;
+                this.data.actions.forEach(action => {
+                    if (!action.pros && !action.cons && action.prosPct === 50) {
+                        action.prosPct = null;
+                        repaired = true;
+                    }
+                });
+                if (repaired) this.saveData();
+            }
+
             this.applyTheme();
         }
 
@@ -427,8 +439,8 @@ const app = {
             `;
         } else {
             goalsContainer.innerHTML = activeGoals.map(goal => {
-                const category = this.data.categories.find(c => c.id === goal.category) ||
-                    this.data.customCategories.find(c => c.id === goal.category) ||
+                const category = this.data.categories.find(c => c.id == goal.category) ||
+                    this.data.customCategories.find(c => c.id == goal.category) ||
                     { name: 'Meta', icon: '🎯', color: '#667eea' };
 
                 return `
@@ -676,8 +688,8 @@ const app = {
         const list = document.getElementById('goal-selection-list');
 
         list.innerHTML = activeGoals.map(goal => {
-            const category = this.data.categories.find(c => c.id === goal.category) ||
-                this.data.customCategories.find(c => c.id === goal.category) ||
+            const category = this.data.categories.find(c => c.id == goal.category) ||
+                this.data.customCategories.find(c => c.id == goal.category) ||
                 { icon: '🎯', color: '#667eea' };
 
             return `
@@ -893,8 +905,8 @@ const app = {
         }
 
         container.innerHTML = activeGoals.map(goal => {
-            const category = this.data.categories.find(c => c.id === goal.category) ||
-                this.data.customCategories.find(c => c.id === goal.category) ||
+            const category = this.data.categories.find(c => c.id == goal.category) ||
+                this.data.customCategories.find(c => c.id == goal.category) ||
                 { icon: '🎯' };
 
             const isChecked = preselectedIds.includes(goal.id);
@@ -1182,7 +1194,8 @@ const app = {
         });
         
         this.data.reminders = newReminders;
-        this.data.lastNotifDate = null; // reset logic
+        this.data.lastNotifDates = {}; // reset logic to allow immediate re-triggering today
+        this.data.lastNotifDate = null; // cleanup old var
         this.saveData();
         this.renderRemindersSettings();
         
@@ -1756,8 +1769,8 @@ const app = {
             goalsContainer.innerHTML = `
                 <div class="goal-titles-list">
                     ${activeGoals.map(goal => {
-                const category = this.data.categories.find(c => c.id === goal.category) ||
-                    this.data.customCategories.find(c => c.id === goal.category) ||
+                const category = this.data.categories.find(c => c.id == goal.category) ||
+                    this.data.customCategories.find(c => c.id == goal.category) ||
                     { icon: '🎯' };
                 const completedCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id) && a.completed).length;
                 const totalCount = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id)).length;
@@ -1820,8 +1833,8 @@ const app = {
             const goalActions = actionsByGoal[goal.id];
             if (!goalActions || goalActions.length === 0) return;
 
-            const category = this.data.categories.find(c => c.id === goal.category) ||
-                this.data.customCategories.find(c => c.id === goal.category) ||
+            const category = this.data.categories.find(c => c.id == goal.category) ||
+                this.data.customCategories.find(c => c.id == goal.category) ||
                 { icon: '🎯', color: '#667eea' };
 
             const completedCount = goalActions.filter(a => a.completed).length;
@@ -1850,8 +1863,8 @@ const app = {
                 let prosConsIndicator = '';
                 if (action.prosPct !== undefined && action.prosPct !== null) {
                     const pct = action.prosPct;
-                    const barColor = pct >= 80 ? '#22c55e' : pct <= 25 ? '#ef4444' : '#f59e0b';
-                    const pctIcon = pct >= 80 ? '👍✅' : pct <= 25 ? '👎❌' : '⚖️';
+                    const barColor = pct >= 80 ? '#22c55e' : pct >= 55 ? '#22c55e' : pct >= 45 ? '#f59e0b' : pct >= 31 ? '#f59e0b' : '#ef4444';
+                    const pctIcon = pct >= 80 ? '👍✅' : pct >= 55 ? '👍' : pct >= 45 ? '⚖️' : pct >= 31 ? '⚖️' : '👎❌';
                     prosConsIndicator = `<span style="font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; background: ${barColor}22; color: ${barColor}; font-weight: 600;">${pctIcon} ${pct}%</span>`;
                 }
                 html += `
@@ -1909,6 +1922,13 @@ const app = {
             unlinkedActions.forEach(action => {
                 const isToday = action.date === today;
                 const dateLabel = isToday ? 'Hoy' : new Date(action.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                let prosConsIndicator = '';
+                if (action.prosPct !== undefined && action.prosPct !== null) {
+                    const pct = action.prosPct;
+                    const barColor = pct >= 80 ? '#22c55e' : pct >= 55 ? '#22c55e' : pct >= 45 ? '#f59e0b' : pct >= 31 ? '#f59e0b' : '#ef4444';
+                    const pctIcon = pct >= 80 ? '👍✅' : pct >= 55 ? '👍' : pct >= 45 ? '⚖️' : pct >= 31 ? '⚖️' : '👎❌';
+                    prosConsIndicator = `<span style="font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; background: ${barColor}22; color: ${barColor}; font-weight: 600;">${pctIcon} ${pct}%</span>`;
+                }
                 html += `
                     <div id="action-item-${action.id}" class="action-item-compact" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.06));">
                         <input type="checkbox" class="action-checkbox" 
@@ -1916,6 +1936,7 @@ const app = {
                             onchange="app.toggleActionComplete('${action.id}')">
                         <div style="flex: 1; font-size: 0.88rem; ${action.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
                             ${this.escapeHtml(action.text)}
+                            ${prosConsIndicator}
                         </div>
                         <span style="font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap;">${dateLabel}</span>
                         <div style="display: flex; gap: 4px; flex-shrink: 0;">
@@ -1970,8 +1991,8 @@ const app = {
     showFocusDetail(goalId) {
         const goal = this.data.goals.find(g => g.id === goalId);
         if (!goal) return;
-        const category = this.data.categories.find(c => c.id === goal.category) ||
-            this.data.customCategories.find(c => c.id === goal.category) ||
+        const category = this.data.categories.find(c => c.id == goal.category) ||
+            this.data.customCategories.find(c => c.id == goal.category) ||
             { icon: '🎯', color: '#667eea' };
         const goalActions = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goalId));
         const completedCount = goalActions.filter(a => a.completed).length;
@@ -2133,8 +2154,8 @@ const app = {
     },
 
     renderGoalCard(goal, isArchived) {
-        const category = this.data.categories.find(c => c.id === goal.category) ||
-            this.data.customCategories.find(c => c.id === goal.category) ||
+        const category = this.data.categories.find(c => c.id == goal.category) ||
+            this.data.customCategories.find(c => c.id == goal.category) ||
             { name: 'Meta', icon: '🎯', color: '#667eea' };
 
         const linkedActions = this.data.actions.filter(a => a.goalIds && a.goalIds.includes(goal.id));
@@ -2306,8 +2327,8 @@ const app = {
         const linkedGoals = (action.goalIds || []).map(gId => {
             const goal = this.data.goals.find(g => g.id === gId);
             if (!goal) return null;
-            const category = this.data.categories.find(c => c.id === goal.category) ||
-                this.data.customCategories.find(c => c.id === goal.category) ||
+            const category = this.data.categories.find(c => c.id == goal.category) ||
+                this.data.customCategories.find(c => c.id == goal.category) ||
                 { icon: '🎯', color: '#667eea' };
             return { title: goal.title, icon: category.icon, color: category.color };
         }).filter(g => g);
@@ -2324,8 +2345,8 @@ const app = {
         let prosConsHtml = '';
         if (action.prosPct !== undefined && action.prosPct !== null) {
             const pct = action.prosPct;
-            const barColor = pct >= 80 ? '#22c55e' : pct <= 25 ? '#ef4444' : '#f59e0b';
-            const verdict = pct >= 80 ? '👍✅ Muy favorable' : pct >= 55 ? '⚖️ Favorable' : pct >= 45 ? '⚖️ Equilibrado' : pct >= 26 ? '⚖️ Desfavorable' : '👎❌ Muy desfavorable';
+            const barColor = pct >= 80 ? '#22c55e' : pct <= 30 ? '#ef4444' : '#f59e0b';
+            const verdict = pct >= 80 ? '👍✅ Muy favorable' : pct >= 55 ? '⚖️ Favorable' : pct >= 45 ? '⚖️ Equilibrado' : pct >= 31 ? '⚖️ Desfavorable' : '👎❌ Muy desfavorable';
             prosConsHtml = `
                 <div style="margin-top: 8px; padding: 8px; background: var(--bg-secondary); border-radius: 8px;">
                     <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">⚖️ ${verdict}</div>
@@ -2397,8 +2418,8 @@ const app = {
             return;
         }
         container.innerHTML = activeGoals.map(goal => {
-            const cat = this.data.categories.find(c => c.id === goal.category) ||
-                this.data.customCategories.find(c => c.id === goal.category) || { icon: '🎯' };
+            const cat = this.data.categories.find(c => c.id == goal.category) ||
+                this.data.customCategories.find(c => c.id == goal.category) || { icon: '🎯' };
             return `
                 <label style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 6px; cursor: pointer;">
                     <input type="checkbox" class="action-goal-check" value="${goal.id}">
@@ -2419,7 +2440,7 @@ const app = {
         document.getElementById('action-notes-input').value = action.notes || '';
         document.getElementById('action-pros-input').value = action.pros || '';
         document.getElementById('action-cons-input').value = action.cons || '';
-        document.getElementById('action-pros-pct').value = action.prosPct !== undefined ? action.prosPct : 50;
+        document.getElementById('action-pros-pct').value = (action.prosPct !== undefined && action.prosPct !== null) ? action.prosPct : 50;
         this.updateProsConsBar();
         this.populateActionGoals();
         // Check linked goals
@@ -2634,13 +2655,37 @@ const app = {
             message: 'Focus to metas',
             enabled: true
         });
-        this.saveReminders();
+        this.saveData();
+        this.renderRemindersSettings();
+        
+        if (this._pushSubscription && this.data.reminderEnabled) {
+            fetch(`${PUSH_SERVER_URL}/update-reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subscription: this._pushSubscription,
+                    reminders: this.data.reminders
+                })
+            }).catch(e => console.log('[WebPush] sync error on add:', e));
+        }
     },
 
     removeReminder(id) {
         if (!confirm('¿Borrar este recordatorio?')) return;
         this.data.reminders = this.data.reminders.filter(r => r.id !== id);
-        this.saveReminders();
+        this.saveData();
+        this.renderRemindersSettings();
+
+        if (this._pushSubscription && this.data.reminderEnabled) {
+            fetch(`${PUSH_SERVER_URL}/update-reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subscription: this._pushSubscription,
+                    reminders: this.data.reminders
+                })
+            }).catch(e => console.log('[WebPush] sync error on remove:', e));
+        }
     },
 
     saveFocusSound() {
